@@ -41,6 +41,32 @@ Type-check all workspaces:
 npm run typecheck
 ```
 
+## Local Database
+
+The backend uses PostgreSQL through Knex. A local database container is defined in `docker-compose.yml`.
+
+Start the database:
+
+```sh
+docker compose up -d db
+```
+
+Run the Agent module migration after the database is up:
+
+```sh
+npm run db:migrate --workspace @ai-agent-platform/backend
+```
+
+Connection details for TablePlus or any other client:
+
+- Host: `localhost`
+- Port: `5433`
+- User: `postgres`
+- Password: `postgres`
+- Database: `ai_agent_platform`
+
+The data lives in the Docker volume `ai_agent_platform_pgdata`, so it persists across container restarts.
+
 ## Backend Health Check
 
 The backend exposes a minimal system health route:

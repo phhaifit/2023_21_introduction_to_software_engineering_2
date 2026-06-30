@@ -1,0 +1,246 @@
+.auth-shell {
+  align-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 32rem),
+    linear-gradient(135deg, #eef5fb 0%, #f7fbff 52%, #e8f0f7 100%);
+  display: flex;
+  min-height: 100vh;
+  padding: 48px 24px;
+}
+
+.auth-wrapper {
+  margin: 0 auto;
+  max-width: 440px;
+  width: 100%;
+}
+
+.auth-brand,
+.main-application-brand {
+  align-items: center;
+  color: #10243f;
+  display: flex;
+  font-weight: 700;
+  gap: 12px;
+}
+
+.auth-brand {
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.auth-brand__mark,
+.main-application-brand__mark {
+  align-items: center;
+  background: #1d4ed8;
+  border-radius: 10px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 800;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.auth-brand__name {
+  font-size: 1rem;
+}
+
+.auth-card,
+.main-application-content {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+}
+
+.auth-card {
+  padding: 32px;
+}
+
+.auth-page,
+.auth-form-preview,
+.auth-field {
+  display: grid;
+}
+
+.auth-page {
+  gap: 28px;
+}
+
+.auth-page__header {
+  text-align: left;
+}
+
+.auth-page__eyebrow {
+  color: #2563eb;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.auth-page h1,
+.main-application-content h1 {
+  color: #10243f;
+  font-size: 1.875rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.auth-page__header p:not(.auth-page__eyebrow),
+.main-application-content p {
+  color: #5b7089;
+  margin: 10px 0 0;
+}
+
+.auth-form-preview {
+  gap: 18px;
+}
+
+.auth-field {
+  color: #20324a;
+  font-size: 0.875rem;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.auth-field input {
+  background: #f8fbff;
+  border: 1px solid #cbd7e5;
+  border-radius: 8px;
+  color: #10243f;
+  font: inherit;
+  height: 46px;
+  padding: 0 14px;
+}
+
+.auth-field input:disabled,
+.auth-primary-button:disabled,
+.logout-placeholder-button:disabled {
+  cursor: not-allowed;
+}
+
+.auth-primary-button,
+.logout-placeholder-button {
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.auth-primary-button {
+  background: #2563eb;
+  color: #ffffff;
+  height: 48px;
+  margin-top: 4px;
+}
+
+.auth-primary-button:disabled {
+  opacity: 0.88;
+}
+
+.auth-navigation {
+  color: #5b7089;
+  margin: 0;
+  text-align: center;
+}
+
+.auth-navigation a {
+  color: #1d4ed8;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.auth-navigation a:hover {
+  text-decoration: underline;
+}
+
+.main-application-shell {
+  background: #eef5fb;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.main-application-header {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 16px 20px;
+}
+
+.logout-placeholder-button {
+  background: #e8eef7;
+  color: #2f4664;
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+.main-application-content {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  margin: 28px auto 0;
+  max-width: 1120px;
+  padding: 32px;
+}
+
+.main-status-mark {
+  align-items: center;
+  background: #e7f7ef;
+  border-radius: 8px;
+  color: #087443;
+  display: flex;
+  flex: 0 0 48px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  height: 48px;
+  justify-content: center;
+}
+
+.main-application-muted {
+  font-size: 0.9375rem;
+}
+
+.main-application-link {
+  background: #2563eb;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 800;
+  margin-top: 18px;
+  padding: 12px 16px;
+  text-decoration: none;
+}
+
+.main-application-link:hover {
+  background: #1d4ed8;
+}
+
+@media (max-width: 640px) {
+  .auth-shell,
+  .main-application-shell {
+    padding: 24px 16px;
+  }
+
+  .auth-card,
+  .main-application-content {
+    padding: 24px;
+  }
+
+  .main-application-header,
+  .main-application-content {
+    gap: 16px;
+  }
+
+  .main-application-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
