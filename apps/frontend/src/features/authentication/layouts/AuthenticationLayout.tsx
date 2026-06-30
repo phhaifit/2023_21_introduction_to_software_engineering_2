@@ -11,9 +11,7 @@ export function AuthenticationLayout() {
           <span className="auth-brand__name">AI Agent Platform for Enterprise</span>
         </div>
 
-        <div className="auth-card">
-          <Outlet />
-        </div>
+        <Outlet />
       </section>
     </main>
   );
