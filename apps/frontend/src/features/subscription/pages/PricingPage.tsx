@@ -64,7 +64,14 @@ export function PricingPage() {
       <div className="plan-grid">
         {plans.map((plan) => {
           const isCurrent = subscription?.planId === plan.id;
-          const action = !subscription ? "Buy now" : isCurrent ? "Renew" : "Upgrade";
+          const isDowngrade = subscription?.planId === "premium" && plan.id === "standard";
+          const action = !subscription
+            ? "Buy now"
+            : isCurrent
+              ? "Renew"
+              : isDowngrade
+                ? "Higher plan active"
+                : "Upgrade";
           return (
             <article className={`plan-card ${plan.name === "Premium" ? "plan-card--featured" : ""}`} key={plan.id}>
               <p className="plan-card__name">{plan.name}</p>
@@ -79,6 +86,7 @@ export function PricingPage() {
               </ul>
               {isCurrent && <span className="status-pill">Current plan</span>}
               <button
+                disabled={isDowngrade}
                 onClick={() => navigate(`/app/subscription/checkout/${plan.id}`)}
                 type="button"
               >

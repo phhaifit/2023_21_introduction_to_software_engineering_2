@@ -242,6 +242,16 @@ describe("payments service", () => {
     expect(harness.transactions).toHaveLength(1);
   });
 
+  it("rejects downgrading from Premium to Standard", async () => {
+    const premiumCheckout = await harness.service.createCheckout(identity, "premium");
+    await harness.service.completePayment(premiumCheckout.transaction.id);
+
+    await expect(harness.service.createCheckout(identity, "standard")).rejects.toMatchObject({
+      code: "SUBSCRIPTION_CONFLICT",
+      status: 409
+    });
+  });
+
   it("completes a new purchase once and provisions a workspace once", async () => {
     const checkout = await harness.service.createCheckout(identity, "standard");
 

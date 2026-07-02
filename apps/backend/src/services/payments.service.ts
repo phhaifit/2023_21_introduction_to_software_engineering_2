@@ -194,6 +194,13 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
         throw new ApplicationError("PLAN_NOT_FOUND", 404, "Plan not found");
       }
       const subscription = await subscriptionRepository.getSubscriptionByUserId(identity.userId);
+      if (subscription?.planId === "premium" && planId === "standard") {
+        throw new ApplicationError(
+          "SUBSCRIPTION_CONFLICT",
+          409,
+          "Downgrading is not supported"
+        );
+      }
       const type = determineTransactionType(subscription, planId);
       const pending = await transactionRepository.findRecentPendingTransaction(
         identity.userId,
