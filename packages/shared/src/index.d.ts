@@ -12,3 +12,17 @@ export type {
   RegisterInput,
   UserStatus
 } from "./authentication.js";
+
+export { WORKFLOW_STATUSES } from "./workflow.js";
+export type {
+  CreateWorkflowInput,
+  UpdateWorkflowInput,
+  Workflow,
+  WorkflowExecution,
+  WorkflowExecutionLogEntry,
+  WorkflowExecutionStatus,
+  WorkflowListFilters,
+  WorkflowStatus,
+  WorkflowStep,
+  WorkflowStepFailurePolicy
+} from "./workflow.js";
