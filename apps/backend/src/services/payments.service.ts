@@ -69,6 +69,7 @@ type PaymentsServiceDependencies = {
   paymentGateway: PaymentGateway;
   workspaceProvisioner: WorkspaceProvisioner;
   now: () => Date;
+  createTransactionId: () => string;
   createGatewayTransactionId: () => string;
 };
 
@@ -80,6 +81,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
     paymentGateway,
     workspaceProvisioner,
     now,
+    createTransactionId,
     createGatewayTransactionId
   } = dependencies;
 
@@ -197,9 +199,14 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
         return { transaction: pending, reused: true };
       }
 
+      const transactionId = createTransactionId();
       const gatewayTransactionId = createGatewayTransactionId();
-      const session = await paymentGateway.createPaymentSession({ gatewayTransactionId });
+      const session = await paymentGateway.createPaymentSession({
+        transactionId,
+        gatewayTransactionId
+      });
       const transaction = await transactionRepository.createPaymentTransaction({
+        id: transactionId,
         userId: identity.userId,
         workspaceId: identity.workspaceId,
         subscriptionId: subscription?.id,
@@ -283,5 +290,6 @@ export const paymentsService = createPaymentsService({
   paymentGateway: mockPaymentGateway,
   workspaceProvisioner: mockWorkspaceProvisioner,
   now: () => new Date(),
+  createTransactionId: () => crypto.randomUUID(),
   createGatewayTransactionId: () => crypto.randomUUID()
 });

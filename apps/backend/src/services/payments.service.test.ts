@@ -115,6 +115,7 @@ function createHarness() {
 
   const transactionRepository = {
     async createPaymentTransaction(input: {
+      id?: string;
       userId: string;
       workspaceId: string;
       subscriptionId?: string;
@@ -125,8 +126,9 @@ function createHarness() {
       paymentUrl: string;
     }) {
       const now = new Date("2026-07-02T00:00:00.000Z").toISOString();
+      transactionSequence += 1;
       const transaction: PaymentTransaction = {
-        id: `transaction-${++transactionSequence}`,
+        id: input.id ?? `transaction-${transactionSequence}`,
         ...input,
         status: "PENDING",
         createdAt: now,
@@ -169,8 +171,8 @@ function createHarness() {
   };
 
   const paymentGateway = {
-    async createPaymentSession(input: { gatewayTransactionId: string }) {
-      return { paymentUrl: `/app/subscription/mock-payment/${input.gatewayTransactionId}` };
+    async createPaymentSession(input: { transactionId: string; gatewayTransactionId: string }) {
+      return { paymentUrl: `/app/subscription/mock-payment/${input.transactionId}` };
     }
   };
 
@@ -192,6 +194,7 @@ function createHarness() {
     paymentGateway,
     workspaceProvisioner,
     now: () => new Date("2026-07-02T00:00:00.000Z"),
+    createTransactionId: () => `transaction-${transactionSequence + 1}`,
     createGatewayTransactionId: () => `gateway-${transactionSequence + 1}`
   });
 
@@ -220,6 +223,7 @@ describe("payments service", () => {
     expect(result.transaction.amount).toBe(199000);
     expect(result.transaction.type).toBe("NEW");
     expect(result.transaction.status).toBe("PENDING");
+    expect(result.transaction.paymentUrl).toContain(result.transaction.id);
   });
 
   it("reuses a matching pending transaction", async () => {

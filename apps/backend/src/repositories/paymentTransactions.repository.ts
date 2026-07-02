@@ -24,6 +24,7 @@ type PaymentTransactionRow = {
 };
 
 export type CreatePaymentTransactionRecord = {
+  id?: string;
   userId: string;
   workspaceId: string;
   subscriptionId?: string;
@@ -66,7 +67,7 @@ export function createPaymentTransactionsRepository(database: Knex = db) {
     ): Promise<PaymentTransaction> {
       const now = new Date();
       const row: PaymentTransactionRow = {
-        id: createUuid(),
+        id: input.id ?? createUuid(),
         user_id: input.userId,
         workspace_id: input.workspaceId,
         subscription_id: input.subscriptionId ?? null,
