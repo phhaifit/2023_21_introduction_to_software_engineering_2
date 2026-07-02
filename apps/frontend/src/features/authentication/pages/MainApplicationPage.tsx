@@ -1,5 +1,6 @@
-import "../styles/authentication.css";
 import { Link } from "react-router-dom";
+
+import "../styles/authentication.css";
 
 export function MainApplicationPage() {
   return (
@@ -23,11 +24,16 @@ export function MainApplicationPage() {
           <h1 id="main-title">Welcome back</h1>
           <p>You are currently viewing the main application.</p>
           <p className="main-application-muted">
-            Main application content will be available here.
+            Open a feature console to manage workspace operations or workflow blueprints.
           </p>
-          <Link className="main-application-link" to="/app/workspaces">
-            Open Workspace Management
-          </Link>
+          <div className="main-application-actions">
+            <Link className="main-application-link" to="/app/workspaces">
+              Open Workspace Management
+            </Link>
+            <Link className="main-application-link" to="/app/workflows">
+              Open Workflow Management
+            </Link>
+          </div>
         </div>
       </section>
     </main>
