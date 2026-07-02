@@ -6,6 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "test": "node --import tsx tests/password-encoder.service.test.ts",
     "prebuild": "npm run prisma:generate",
     "build": "tsc -p tsconfig.json",
     "pretypecheck": "npm run prisma:generate",
@@ -23,6 +24,7 @@
     "@ai-agent-platform/shared": "0.1.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "knex": "^3.3.0",
