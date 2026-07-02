@@ -24,11 +24,16 @@ export function MainApplicationPage() {
           <h1 id="main-title">Welcome back</h1>
           <p>You are currently viewing the main application.</p>
           <p className="main-application-muted">
-            Open the Workflow Management console to manage workflow blueprints and executions.
+            Open a feature console to manage workspace operations or workflow blueprints.
           </p>
-          <Link className="main-application-link" to="/app/workflows">
-            Open Workflow Management
-          </Link>
+          <div className="main-application-actions">
+            <Link className="main-application-link" to="/app/workspaces">
+              Open Workspace Management
+            </Link>
+            <Link className="main-application-link" to="/app/workflows">
+              Open Workflow Management
+            </Link>
+          </div>
         </div>
       </section>
     </main>

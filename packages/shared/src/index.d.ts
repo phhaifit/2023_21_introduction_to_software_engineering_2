@@ -26,3 +26,16 @@ export type {
   WorkflowStep,
   WorkflowStepFailurePolicy
 } from "./workflow.js";
+
+export { WORKSPACE_RESOURCE_PROFILES, WORKSPACE_STATUSES } from "./workspace.js";
+export type {
+  CreateWorkspaceInput,
+  FailWorkspaceInput,
+  UpdateWorkspaceInput,
+  Workspace,
+  WorkspaceAction,
+  WorkspaceConfig,
+  WorkspaceResourceProfile,
+  WorkspaceStatus,
+  WorkspaceValidationIssue
+} from "./workspace.js";

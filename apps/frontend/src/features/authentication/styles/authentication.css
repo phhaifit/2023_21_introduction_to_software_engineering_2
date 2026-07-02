@@ -127,6 +127,13 @@
   font-size: 0.9375rem;
 }
 
+.main-application-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
 @media (max-width: 640px) {
   .auth-shell,
   .main-application-shell {
@@ -160,4 +167,8 @@
   min-height: 42px;
   padding: 0 18px;
   text-decoration: none;
+}
+
+.main-application-link:hover {
+  background: #1e40af;
 }
