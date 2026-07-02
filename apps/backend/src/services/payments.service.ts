@@ -1,0 +1,287 @@
+import type {
+  AdminSubscriptionListResponse,
+  CheckoutResponse,
+  PaymentStatusResponse,
+  PaymentTransaction,
+  Plan,
+  Subscription,
+  TransactionStatus,
+  TransactionType
+} from "@ai-agent-platform/shared";
+
+import {
+  calculateRenewedEndDate,
+  determineTransactionType,
+  requiresWorkspaceProvisioning
+} from "../domain/subscription.rules.js";
+import { mockPaymentGateway } from "../integrations/payment/mockPaymentGateway.js";
+import type { PaymentGateway } from "../integrations/payment/paymentGateway.js";
+import { mockWorkspaceProvisioner } from "../integrations/workspace/mockWorkspaceProvisioner.js";
+import type { WorkspaceProvisioner } from "../integrations/workspace/workspaceProvisioner.js";
+import {
+  paymentTransactionsRepository,
+  type CreatePaymentTransactionRecord
+} from "../repositories/paymentTransactions.repository.js";
+import { plansRepository } from "../repositories/plans.repository.js";
+import {
+  subscriptionsRepository,
+  type CreateSubscriptionRecord,
+  type UpdateSubscriptionRecord
+} from "../repositories/subscriptions.repository.js";
+
+export type RequestIdentity = {
+  userId: string;
+  workspaceId: string;
+  role: "admin" | "member";
+};
+
+type PlanRepository = {
+  listActivePlans(): Promise<Plan[]>;
+  getActivePlanById(id: string): Promise<Plan | undefined>;
+};
+
+type SubscriptionRepository = {
+  getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
+  createSubscription(input: CreateSubscriptionRecord): Promise<Subscription>;
+  updateSubscription(id: string, input: UpdateSubscriptionRecord): Promise<Subscription | undefined>;
+  listSubscriptions(): Promise<AdminSubscriptionListResponse>;
+};
+
+type PaymentTransactionRepository = {
+  createPaymentTransaction(input: CreatePaymentTransactionRecord): Promise<PaymentTransaction>;
+  getPaymentTransactionById(id: string): Promise<PaymentTransaction | undefined>;
+  findRecentPendingTransaction(
+    userId: string,
+    planId: string,
+    type: TransactionType
+  ): Promise<PaymentTransaction | undefined>;
+  transitionPendingTransaction(
+    id: string,
+    status: Exclude<TransactionStatus, "PENDING">
+  ): Promise<PaymentTransaction | undefined>;
+  markFulfilled(id: string): Promise<void>;
+};
+
+type PaymentsServiceDependencies = {
+  planRepository: PlanRepository;
+  subscriptionRepository: SubscriptionRepository;
+  transactionRepository: PaymentTransactionRepository;
+  paymentGateway: PaymentGateway;
+  workspaceProvisioner: WorkspaceProvisioner;
+  now: () => Date;
+  createGatewayTransactionId: () => string;
+};
+
+export function createPaymentsService(dependencies: PaymentsServiceDependencies) {
+  const {
+    planRepository,
+    subscriptionRepository,
+    transactionRepository,
+    paymentGateway,
+    workspaceProvisioner,
+    now,
+    createGatewayTransactionId
+  } = dependencies;
+
+  async function getStatus(transaction: PaymentTransaction): Promise<PaymentStatusResponse> {
+    const subscription = await subscriptionRepository.getSubscriptionByUserId(transaction.userId);
+    return { transaction, subscription };
+  }
+
+  async function setWorkspaceResult(
+    subscription: Subscription,
+    plan: Plan,
+    type: TransactionType,
+    simulateFailure = false
+  ): Promise<Subscription> {
+    if (!requiresWorkspaceProvisioning(type)) {
+      return subscription;
+    }
+
+    await subscriptionRepository.updateSubscription(subscription.id, {
+      workspaceStatus: "PROVISIONING"
+    });
+
+    try {
+      if (simulateFailure) {
+        throw new Error("Simulated provisioning failure");
+      }
+      const input = {
+        subscriptionId: subscription.id,
+        workspaceId: subscription.workspaceId,
+        plan
+      };
+      if (type === "NEW") {
+        await workspaceProvisioner.provision(input);
+      } else {
+        await workspaceProvisioner.updatePlan(input);
+      }
+      return (
+        (await subscriptionRepository.updateSubscription(subscription.id, {
+          workspaceStatus: "ACTIVE"
+        })) ?? subscription
+      );
+    } catch {
+      return (
+        (await subscriptionRepository.updateSubscription(subscription.id, {
+          workspaceStatus: "PROVISIONING_FAILED"
+        })) ?? subscription
+      );
+    }
+  }
+
+  async function fulfill(
+    transaction: PaymentTransaction,
+    simulateProvisioningFailure = false
+  ): Promise<Subscription> {
+    const existing = await subscriptionRepository.getSubscriptionByUserId(transaction.userId);
+    const plan = await planRepository.getActivePlanById(transaction.planId);
+    if (!plan) {
+      throw new Error("Plan not found");
+    }
+
+    let subscription: Subscription;
+    if (transaction.type === "NEW") {
+      if (existing) {
+        subscription = existing;
+      } else {
+        const startDate = now();
+        subscription = await subscriptionRepository.createSubscription({
+          userId: transaction.userId,
+          workspaceId: transaction.workspaceId,
+          planId: transaction.planId,
+          status: "ACTIVE",
+          startDate,
+          endDate: calculateRenewedEndDate(startDate, startDate),
+          workspaceStatus: "NOT_PROVISIONED"
+        });
+      }
+    } else if (!existing) {
+      throw new Error("Subscription not found");
+    } else if (transaction.type === "RENEW") {
+      subscription =
+        (await subscriptionRepository.updateSubscription(existing.id, {
+          status: "ACTIVE",
+          endDate: calculateRenewedEndDate(now(), new Date(existing.endDate))
+        })) ?? existing;
+    } else {
+      subscription =
+        (await subscriptionRepository.updateSubscription(existing.id, {
+          planId: transaction.planId,
+          status: "ACTIVE"
+        })) ?? existing;
+    }
+
+    return setWorkspaceResult(
+      subscription,
+      plan,
+      transaction.type,
+      simulateProvisioningFailure
+    );
+  }
+
+  return {
+    async createCheckout(identity: RequestIdentity, planId: string): Promise<CheckoutResponse> {
+      const plan = await planRepository.getActivePlanById(planId);
+      if (!plan) {
+        throw new Error("Plan not found");
+      }
+      const subscription = await subscriptionRepository.getSubscriptionByUserId(identity.userId);
+      const type = determineTransactionType(subscription, planId);
+      const pending = await transactionRepository.findRecentPendingTransaction(
+        identity.userId,
+        planId,
+        type
+      );
+      if (pending) {
+        return { transaction: pending, reused: true };
+      }
+
+      const gatewayTransactionId = createGatewayTransactionId();
+      const session = await paymentGateway.createPaymentSession({ gatewayTransactionId });
+      const transaction = await transactionRepository.createPaymentTransaction({
+        userId: identity.userId,
+        workspaceId: identity.workspaceId,
+        subscriptionId: subscription?.id,
+        planId,
+        type,
+        amount: plan.monthlyPrice,
+        gatewayTransactionId,
+        paymentUrl: session.paymentUrl
+      });
+      return { transaction, reused: false };
+    },
+
+    async getPaymentStatus(
+      identity: RequestIdentity,
+      transactionId: string
+    ): Promise<PaymentStatusResponse> {
+      const transaction = await transactionRepository.getPaymentTransactionById(transactionId);
+      if (!transaction || transaction.userId !== identity.userId) {
+        throw new Error("Transaction not found");
+      }
+      return getStatus(transaction);
+    },
+
+    async completePayment(
+      transactionId: string,
+      options: { simulateProvisioningFailure?: boolean } = {}
+    ): Promise<PaymentStatusResponse> {
+      const current = await transactionRepository.getPaymentTransactionById(transactionId);
+      if (!current) throw new Error("Transaction not found");
+
+      if (current.status === "COMPLETED" && current.fulfillmentCompletedAt) {
+        return getStatus(current);
+      }
+
+      const completed =
+        current.status === "PENDING"
+          ? await transactionRepository.transitionPendingTransaction(transactionId, "COMPLETED")
+          : current;
+      if (!completed || completed.status !== "COMPLETED") {
+        return getStatus(current);
+      }
+
+      if (!completed.fulfillmentCompletedAt) {
+        await fulfill(completed, options.simulateProvisioningFailure);
+        await transactionRepository.markFulfilled(completed.id);
+      }
+      const refreshed =
+        (await transactionRepository.getPaymentTransactionById(completed.id)) ?? completed;
+      return getStatus(refreshed);
+    },
+
+    async failPayment(transactionId: string): Promise<PaymentStatusResponse> {
+      const current = await transactionRepository.getPaymentTransactionById(transactionId);
+      if (!current) throw new Error("Transaction not found");
+      const failed =
+        (await transactionRepository.transitionPendingTransaction(transactionId, "FAILED")) ??
+        current;
+      return getStatus(failed);
+    },
+
+    async cancelPayment(
+      identity: RequestIdentity,
+      transactionId: string
+    ): Promise<PaymentStatusResponse> {
+      const current = await transactionRepository.getPaymentTransactionById(transactionId);
+      if (!current || current.userId !== identity.userId) {
+        throw new Error("Transaction not found");
+      }
+      const cancelled =
+        (await transactionRepository.transitionPendingTransaction(transactionId, "CANCELLED")) ??
+        current;
+      return getStatus(cancelled);
+    }
+  };
+}
+
+export const paymentsService = createPaymentsService({
+  planRepository: plansRepository,
+  subscriptionRepository: subscriptionsRepository,
+  transactionRepository: paymentTransactionsRepository,
+  paymentGateway: mockPaymentGateway,
+  workspaceProvisioner: mockWorkspaceProvisioner,
+  now: () => new Date(),
+  createGatewayTransactionId: () => crypto.randomUUID()
+});
