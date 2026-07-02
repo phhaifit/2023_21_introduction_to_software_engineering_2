@@ -43,7 +43,7 @@ npm run typecheck
 
 ## Local Database
 
-The backend uses PostgreSQL through Knex. A local database container is defined in `docker-compose.yml`.
+The backend uses PostgreSQL with Knex and Prisma. A local database container is defined in `docker-compose.yml`.
 
 Start the database:
 
@@ -57,6 +57,18 @@ Run the Agent module migration after the database is up:
 npm run db:migrate --workspace @ai-agent-platform/backend
 ```
 
+Run Authentication Prisma migrations:
+
+```sh
+npm run prisma:migrate:deploy --workspace @ai-agent-platform/backend
+```
+
+Generate the Prisma client:
+
+```sh
+npm run prisma:generate --workspace @ai-agent-platform/backend
+```
+
 Connection details for TablePlus or any other client:
 
 - Host: `localhost`
@@ -65,7 +77,7 @@ Connection details for TablePlus or any other client:
 - Password: `postgres`
 - Database: `ai_agent_platform`
 
-The data lives in the Docker volume `ai_agent_platform_pgdata`, so it persists across container restarts.
+The database data is stored in the named volume defined in `docker-compose.yml`, so it persists across container restarts.
 
 ## Backend Health Check
 
