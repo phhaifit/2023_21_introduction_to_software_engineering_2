@@ -1,4 +1,11 @@
 export {
+  createToken,
+  findActiveByTokenHash,
+  findByTokenHash,
+  revokeByTokenHash
+} from "./token.repository.js";
+export type { CreateAuthTokenInput } from "./token.repository.js";
+export {
   createUser,
   existsByEmail,
   findByEmail,
