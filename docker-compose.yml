@@ -16,3 +16,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+volumes:
+  ai_agent_platform_pgdata:
