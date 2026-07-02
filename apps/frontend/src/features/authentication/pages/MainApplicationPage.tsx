@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import "../styles/authentication.css";
 
 export function MainApplicationPage() {
@@ -22,8 +24,11 @@ export function MainApplicationPage() {
           <h1 id="main-title">Welcome back</h1>
           <p>You are currently viewing the main application.</p>
           <p className="main-application-muted">
-            Main application content will be available here.
+            Open the Workflow Management console to manage workflow blueprints and executions.
           </p>
+          <Link className="main-application-link" to="/app/workflows">
+            Open Workflow Management
+          </Link>
         </div>
       </section>
     </main>
