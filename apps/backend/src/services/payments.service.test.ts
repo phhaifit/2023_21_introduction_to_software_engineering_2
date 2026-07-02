@@ -226,6 +226,13 @@ describe("payments service", () => {
     expect(result.transaction.paymentUrl).toContain(result.transaction.id);
   });
 
+  it("reports a missing plan as a typed not-found error", async () => {
+    await expect(harness.service.createCheckout(identity, "missing")).rejects.toMatchObject({
+      code: "PLAN_NOT_FOUND",
+      status: 404
+    });
+  });
+
   it("reuses a matching pending transaction", async () => {
     const first = await harness.service.createCheckout(identity, "standard");
     const second = await harness.service.createCheckout(identity, "standard");

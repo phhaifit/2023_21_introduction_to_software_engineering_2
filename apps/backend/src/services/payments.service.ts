@@ -14,6 +14,7 @@ import {
   determineTransactionType,
   requiresWorkspaceProvisioning
 } from "../domain/subscription.rules.js";
+import { ApplicationError } from "../errors/applicationError.js";
 import { mockPaymentGateway } from "../integrations/payment/mockPaymentGateway.js";
 import type { PaymentGateway } from "../integrations/payment/paymentGateway.js";
 import { mockWorkspaceProvisioner } from "../integrations/workspace/mockWorkspaceProvisioner.js";
@@ -139,7 +140,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
     const existing = await subscriptionRepository.getSubscriptionByUserId(transaction.userId);
     const plan = await planRepository.getActivePlanById(transaction.planId);
     if (!plan) {
-      throw new Error("Plan not found");
+      throw new ApplicationError("PLAN_NOT_FOUND", 404, "Plan not found");
     }
 
     let subscription: Subscription;
@@ -159,7 +160,11 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
         });
       }
     } else if (!existing) {
-      throw new Error("Subscription not found");
+      throw new ApplicationError(
+        "SUBSCRIPTION_CONFLICT",
+        409,
+        "Subscription required for this transaction"
+      );
     } else if (transaction.type === "RENEW") {
       subscription =
         (await subscriptionRepository.updateSubscription(existing.id, {
@@ -186,7 +191,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
     async createCheckout(identity: RequestIdentity, planId: string): Promise<CheckoutResponse> {
       const plan = await planRepository.getActivePlanById(planId);
       if (!plan) {
-        throw new Error("Plan not found");
+        throw new ApplicationError("PLAN_NOT_FOUND", 404, "Plan not found");
       }
       const subscription = await subscriptionRepository.getSubscriptionByUserId(identity.userId);
       const type = determineTransactionType(subscription, planId);
@@ -224,8 +229,11 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       transactionId: string
     ): Promise<PaymentStatusResponse> {
       const transaction = await transactionRepository.getPaymentTransactionById(transactionId);
-      if (!transaction || transaction.userId !== identity.userId) {
-        throw new Error("Transaction not found");
+      if (!transaction) {
+        throw new ApplicationError("TRANSACTION_NOT_FOUND", 404, "Transaction not found");
+      }
+      if (transaction.userId !== identity.userId) {
+        throw new ApplicationError("TRANSACTION_NOT_OWNED", 403, "Transaction access denied");
       }
       return getStatus(transaction);
     },
@@ -235,7 +243,9 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       options: { simulateProvisioningFailure?: boolean } = {}
     ): Promise<PaymentStatusResponse> {
       const current = await transactionRepository.getPaymentTransactionById(transactionId);
-      if (!current) throw new Error("Transaction not found");
+      if (!current) {
+        throw new ApplicationError("TRANSACTION_NOT_FOUND", 404, "Transaction not found");
+      }
 
       if (current.status === "COMPLETED" && current.fulfillmentCompletedAt) {
         return getStatus(current);
@@ -260,7 +270,9 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
 
     async failPayment(transactionId: string): Promise<PaymentStatusResponse> {
       const current = await transactionRepository.getPaymentTransactionById(transactionId);
-      if (!current) throw new Error("Transaction not found");
+      if (!current) {
+        throw new ApplicationError("TRANSACTION_NOT_FOUND", 404, "Transaction not found");
+      }
       const failed =
         (await transactionRepository.transitionPendingTransaction(transactionId, "FAILED")) ??
         current;
@@ -272,8 +284,11 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       transactionId: string
     ): Promise<PaymentStatusResponse> {
       const current = await transactionRepository.getPaymentTransactionById(transactionId);
-      if (!current || current.userId !== identity.userId) {
-        throw new Error("Transaction not found");
+      if (!current) {
+        throw new ApplicationError("TRANSACTION_NOT_FOUND", 404, "Transaction not found");
+      }
+      if (current.userId !== identity.userId) {
+        throw new ApplicationError("TRANSACTION_NOT_OWNED", 403, "Transaction access denied");
       }
       const cancelled =
         (await transactionRepository.transitionPendingTransaction(transactionId, "CANCELLED")) ??
