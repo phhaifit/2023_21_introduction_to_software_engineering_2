@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { SubscriptionShell } from "../components/SubscriptionShell";
+import { getWorkspaceStatusMessage } from "../components/workspaceStatusMessage";
 import { getPaymentStatus } from "../services/subscription.api";
 
 export function PaymentResultPage() {
@@ -23,12 +24,19 @@ export function PaymentResultPage() {
     void load();
   }, [transactionId]);
 
+  const workspaceStatusMessage = getWorkspaceStatusMessage(
+    result?.subscription?.workspaceStatus
+  );
+
   return (
     <SubscriptionShell>
       <div className="result-card" aria-live="polite">
         <p className="eyebrow">PAYMENT RESULT</p>
         <h1>{result?.transaction.status ?? "Loading…"}</h1>
         {error && <p className="inline-error">{error}</p>}
+        {workspaceStatusMessage && (
+          <p className="state-card state-card--error">{workspaceStatusMessage}</p>
+        )}
         {result && (
           <dl className="order-summary">
             <div><dt>Transaction</dt><dd>{result.transaction.id}</dd></div>

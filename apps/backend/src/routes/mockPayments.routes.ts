@@ -10,7 +10,7 @@ import { env } from "../config/env.js";
 export const mockPaymentsRouter = Router();
 
 mockPaymentsRouter.use((_request, response, next) => {
-  if (env.paymentProvider !== "mock") {
+  if (!env.mockPaymentEnabled) {
     response.status(404).json({ error: "Not Found" });
     return;
   }

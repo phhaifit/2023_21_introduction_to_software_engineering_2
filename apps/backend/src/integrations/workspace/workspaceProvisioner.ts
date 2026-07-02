@@ -4,6 +4,7 @@ export type WorkspaceProvisionInput = {
   subscriptionId: string;
   workspaceId: string;
   plan: Plan;
+  idempotencyKey: string;
 };
 
 export interface WorkspaceProvisioner {

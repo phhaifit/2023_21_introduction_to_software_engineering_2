@@ -45,6 +45,7 @@ function createHarness() {
   const subscriptions: Subscription[] = [];
   const transactions: PaymentTransaction[] = [];
   const provisionCalls: string[] = [];
+  const provisioningIdempotencyKeys: string[] = [];
   const updatePlanCalls: string[] = [];
   let transactionSequence = 0;
   let subscriptionSequence = 0;
@@ -177,8 +178,9 @@ function createHarness() {
   };
 
   const workspaceProvisioner = {
-    async provision(input: { subscriptionId: string }) {
+    async provision(input: { subscriptionId: string; idempotencyKey?: string }) {
       provisionCalls.push(input.subscriptionId);
+      provisioningIdempotencyKeys.push(input.idempotencyKey ?? "");
       if (provisioningShouldFail) throw new Error("Provisioning failed");
     },
     async updatePlan(input: { subscriptionId: string }) {
@@ -203,6 +205,7 @@ function createHarness() {
     subscriptions,
     transactions,
     provisionCalls,
+    provisioningIdempotencyKeys,
     updatePlanCalls,
     setProvisioningFailure(value: boolean) {
       provisioningShouldFail = value;
@@ -263,6 +266,7 @@ describe("payments service", () => {
     expect(second.subscription?.id).toBe(first.subscription?.id);
     expect(harness.subscriptions).toHaveLength(1);
     expect(harness.provisionCalls).toHaveLength(1);
+    expect(harness.provisioningIdempotencyKeys).toEqual([checkout.transaction.id]);
   });
 
   it("renews from the current end date without provisioning again", async () => {

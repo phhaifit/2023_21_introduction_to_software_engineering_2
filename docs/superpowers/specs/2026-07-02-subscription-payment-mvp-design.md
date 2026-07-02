@@ -118,7 +118,7 @@ Gateway transaction ID unique. Fulfillment timestamp ngăn gia hạn/kích hoạ
 | POST | `/api/mock-payments/:id/provisioning-failure` | Success payment, failed workspace |
 | GET | `/api/admin/subscriptions` | Danh sách phân trang/filter |
 
-Mock endpoints trả `404` khi `PAYMENT_PROVIDER` khác `mock`.
+Mock endpoints trả `404` khi `PAYMENT_PROVIDER` khác `mock` hoặc `NODE_ENV=production`.
 
 ## Business flow
 
@@ -184,7 +184,9 @@ Routes:
 - `/app/subscription`
 - `/app/admin/subscriptions`
 
-UI dùng native fetch qua typed API client. Mỗi page có loading, empty, error và retry states. Mock payment page có các nút Complete, Fail, Complete with provisioning failure và Cancel.
+UI dùng native fetch qua typed API client. Mỗi page có loading, empty, error và retry states. Mock payment page chỉ được đăng ký trong Vite development build, ghi rõ đây là developer tool, và cho phép giả lập success, failure, provisioning failure hoặc cancellation. Production build không đăng ký route này.
+
+Khi workspace ở `PROVISIONING_FAILED`, trang payment result và subscription status phải nói rõ payment đã thành công, subscription vẫn active và workspace cần support/integration retry. Các use case yêu cầu retry dùng cùng idempotency key nhưng không yêu cầu endpoint retry cho user/admin trong MVP.
 
 ## Testing
 

@@ -95,6 +95,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
     subscription: Subscription,
     plan: Plan,
     type: TransactionType,
+    idempotencyKey: string,
     simulateFailure = false
   ): Promise<Subscription> {
     if (!requiresWorkspaceProvisioning(type)) {
@@ -112,7 +113,8 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       const input = {
         subscriptionId: subscription.id,
         workspaceId: subscription.workspaceId,
-        plan
+        plan,
+        idempotencyKey
       };
       if (type === "NEW") {
         await workspaceProvisioner.provision(input);
@@ -183,6 +185,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       subscription,
       plan,
       transaction.type,
+      transaction.id,
       simulateProvisioningFailure
     );
   }

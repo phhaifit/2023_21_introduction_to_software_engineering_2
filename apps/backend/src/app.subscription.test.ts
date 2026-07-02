@@ -69,10 +69,12 @@ vi.mock("./services/payments.service.js", () => ({
 }));
 
 import { app } from "./app.js";
+import { env } from "./config/env.js";
 
 describe("subscription payment HTTP API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    env.mockPaymentEnabled = true;
     serviceMocks.listPlansService.mockResolvedValue([standard]);
     serviceMocks.getMySubscriptionService.mockResolvedValue(subscription);
     serviceMocks.listAllSubscriptionsService.mockResolvedValue({
@@ -131,6 +133,17 @@ describe("subscription payment HTTP API", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.transaction.status).toBe("COMPLETED");
+  });
+
+  it("hides the local mock endpoint when mock payment is disabled", async () => {
+    env.mockPaymentEnabled = false;
+
+    const response = await request(app).post(
+      "/api/mock-payments/transaction-1/complete"
+    );
+
+    expect(response.status).toBe(404);
+    expect(serviceMocks.completePayment).not.toHaveBeenCalled();
   });
 
   it("returns the current subscription and admin list", async () => {

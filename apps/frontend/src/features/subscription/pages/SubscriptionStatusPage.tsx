@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { SubscriptionShell } from "../components/SubscriptionShell";
+import { getWorkspaceStatusMessage } from "../components/workspaceStatusMessage";
 import { ApiError, getMySubscription } from "../services/subscription.api";
 
 export function SubscriptionStatusPage() {
@@ -19,6 +20,8 @@ export function SubscriptionStatusPage() {
       });
   }, []);
 
+  const workspaceStatusMessage = getWorkspaceStatusMessage(subscription?.workspaceStatus);
+
   return (
     <SubscriptionShell>
       <p className="eyebrow">MY SUBSCRIPTION</p>
@@ -34,6 +37,11 @@ export function SubscriptionStatusPage() {
         <div className="subscription-status-card">
           <span className="status-pill">{subscription.status}</span>
           <h2>{subscription.planId}</h2>
+          {workspaceStatusMessage && (
+            <p className="state-card state-card--error">
+              {workspaceStatusMessage}
+            </p>
+          )}
           <dl className="order-summary">
             <div><dt>Valid until</dt><dd>{new Date(subscription.endDate).toLocaleDateString()}</dd></div>
             <div><dt>Workspace</dt><dd>{subscription.workspaceStatus}</dd></div>

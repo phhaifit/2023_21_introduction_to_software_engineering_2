@@ -40,16 +40,28 @@ export function MockPaymentPage() {
   return (
     <SubscriptionShell>
       <div className="mock-payment-card">
-        <p className="eyebrow">LOCAL MOCK GATEWAY</p>
-        <h1>Simulate payment result</h1>
+        <p className="eyebrow">DEVELOPER TOOL · LOCAL MOCK GATEWAY</p>
+        <h1>Payment result simulator</h1>
+        <p className="state-card">
+          Development and test only. A real payment gateway decides these results;
+          customers never choose them.
+        </p>
         <p>Transaction: <code>{transactionId}</code></p>
         <p>Status: <strong>{result?.transaction.status ?? "Loading…"}</strong></p>
         {error && <p className="inline-error">{error}</p>}
         <div className="mock-actions">
-          <button disabled={busy} onClick={() => void run("complete")} type="button">Complete</button>
-          <button disabled={busy} onClick={() => void run("provisioning-failure")} type="button">Complete, provisioning fails</button>
-          <button disabled={busy} onClick={() => void run("fail")} type="button">Fail</button>
-          <button className="danger-button" disabled={busy} onClick={() => void run("cancel")} type="button">Cancel</button>
+          <button disabled={busy} onClick={() => void run("complete")} type="button">
+            Simulate payment success
+          </button>
+          <button disabled={busy} onClick={() => void run("provisioning-failure")} type="button">
+            Simulate success + workspace failure
+          </button>
+          <button disabled={busy} onClick={() => void run("fail")} type="button">
+            Simulate payment failure
+          </button>
+          <button className="danger-button" disabled={busy} onClick={() => void run("cancel")} type="button">
+            Simulate cancellation
+          </button>
         </div>
         <Link className="button button--secondary" to={`/app/subscription/payments/${transactionId}`}>
           View payment result
