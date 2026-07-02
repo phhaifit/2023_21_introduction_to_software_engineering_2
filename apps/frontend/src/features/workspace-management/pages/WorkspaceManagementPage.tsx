@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import {
+  WORKSPACE_RESOURCE_PROFILES,
+  WORKSPACE_STATUSES,
+  type CreateWorkspaceInput,
+  type UpdateWorkspaceInput,
+  type Workspace,
+  type WorkspaceAction,
+  type WorkspaceResourceProfile,
+  type WorkspaceStatus,
+  type WorkspaceValidationIssue
+} from "@ai-agent-platform/shared";
 
-type WorkspaceStatus = "PENDING" | "PROVISIONING" | "RUNNING" | "FAILED" | "STOPPED";
-type WorkspaceResourceProfile = "Starter" | "Standard" | "Performance";
+import {
+  WorkspaceApiValidationError,
+  createWorkspace as createWorkspaceRequest,
+  deleteWorkspace as deleteWorkspaceRequest,
+  listWorkspaces,
+  runWorkspaceAction,
+  updateWorkspace as updateWorkspaceRequest
+} from "../api/workspaceApi";
+import "../styles/workspace.css";
+
 type StatusFilter = "ALL" | WorkspaceStatus;
-
-interface Workspace {
-  id: string;
-  name: string;
-  description: string;
-  ownerName: string;
-  status: WorkspaceStatus;
-  config: {
-    templateId: string;
-    resourceProfile: WorkspaceResourceProfile;
-    region: string;
-  };
-  accessUrl?: string;
-  containerId?: string;
-  openClawInstanceId?: string;
-  failureReason?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface WorkspaceFormState {
   name: string;
@@ -32,25 +32,8 @@ interface WorkspaceFormState {
   region: string;
 }
 
-interface WorkspaceListResponse {
-  data: Workspace[];
-}
-
-interface WorkspaceResponse {
-  data: Workspace;
-}
-
-interface ApiErrorResponse {
-  error: string;
-  details?: Array<{
-    field: string;
-    message: string;
-  }>;
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
-const statusOptions: StatusFilter[] = ["ALL", "PENDING", "PROVISIONING", "RUNNING", "FAILED", "STOPPED"];
-const resourceProfiles: WorkspaceResourceProfile[] = ["Starter", "Standard", "Performance"];
+const statusOptions: StatusFilter[] = ["ALL", ...WORKSPACE_STATUSES];
+const resourceProfiles = WORKSPACE_RESOURCE_PROFILES;
 const templates = [
   { id: "business-operations", label: "Business Operations" },
   { id: "hr-automation", label: "HR Automation" },
@@ -83,9 +66,9 @@ export function WorkspaceManagementPage() {
     setErrorMessage("");
 
     try {
-      const response = await apiRequest<WorkspaceListResponse>("/api/workspaces");
-      setWorkspaces(response.data);
-      setSelectedWorkspaceId((currentId) => currentId || response.data[0]?.id || "");
+      const nextWorkspaces = await listWorkspaces();
+      setWorkspaces(nextWorkspaces);
+      setSelectedWorkspaceId((currentId) => currentId || nextWorkspaces[0]?.id || "");
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     } finally {
@@ -114,12 +97,19 @@ export function WorkspaceManagementPage() {
 
   async function createWorkspace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await submitWorkspaceMutation("/api/workspaces", "POST", createForm, (workspace) => {
+    setFormErrors({});
+    setErrorMessage("");
+    setMessage("");
+
+    try {
+      const workspace = await createWorkspaceRequest(toCreateInput(createForm));
       setWorkspaces((current) => [workspace, ...current]);
       setSelectedWorkspaceId(workspace.id);
       setCreateForm(emptyFormState);
       setMessage("Workspace created and moved to provisioning.");
-    });
+    } catch (error) {
+      handleWorkspaceMutationError(error);
+    }
   }
 
   async function updateWorkspace(event: FormEvent<HTMLFormElement>) {
@@ -129,42 +119,30 @@ export function WorkspaceManagementPage() {
       return;
     }
 
-    await submitWorkspaceMutation(
-      `/api/workspaces/${selectedWorkspace.id}`,
-      "PATCH",
-      editForm,
-      (workspace) => {
-        upsertWorkspace(workspace);
-        setIsEditMode(false);
-        setMessage("Workspace updated.");
-      }
-    );
-  }
-
-  async function submitWorkspaceMutation(
-    path: string,
-    method: "POST" | "PATCH",
-    body: WorkspaceFormState,
-    onSuccess: (workspace: Workspace) => void
-  ) {
     setFormErrors({});
     setErrorMessage("");
     setMessage("");
 
     try {
-      const response = await apiRequest<WorkspaceResponse>(path, { method, body });
-      onSuccess(response.data);
+      const workspace = await updateWorkspaceRequest(selectedWorkspace.id, toUpdateInput(editForm));
+      upsertWorkspace(workspace);
+      setIsEditMode(false);
+      setMessage("Workspace updated.");
     } catch (error) {
-      if (error instanceof ApiValidationError) {
-        setFormErrors(toFieldErrors(error.details));
-        return;
-      }
-
-      setErrorMessage(toErrorMessage(error));
+      handleWorkspaceMutationError(error);
     }
   }
 
-  async function runAction(action: "start" | "stop" | "restart" | "retry" | "complete" | "fail") {
+  function handleWorkspaceMutationError(error: unknown) {
+    if (error instanceof WorkspaceApiValidationError) {
+      setFormErrors(toFieldErrors(error.details));
+      return;
+    }
+
+    setErrorMessage(toErrorMessage(error));
+  }
+
+  async function runAction(action: WorkspaceAction) {
     if (!selectedWorkspace) {
       return;
     }
@@ -175,12 +153,9 @@ export function WorkspaceManagementPage() {
         : undefined;
 
     try {
-      const response = await apiRequest<WorkspaceResponse>(
-        `/api/workspaces/${selectedWorkspace.id}/${action}`,
-        { method: "POST", body }
-      );
-      upsertWorkspace(response.data);
-      setMessage(`Workspace status changed to ${response.data.status}.`);
+      const workspace = await runWorkspaceAction(selectedWorkspace.id, action, body);
+      upsertWorkspace(workspace);
+      setMessage(`Workspace status changed to ${workspace.status}.`);
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
     }
@@ -192,7 +167,7 @@ export function WorkspaceManagementPage() {
     }
 
     try {
-      await apiRequest(`/api/workspaces/${selectedWorkspace.id}`, { method: "DELETE" });
+      await deleteWorkspaceRequest(selectedWorkspace.id);
       setWorkspaces((current) => current.filter((workspace) => workspace.id !== selectedWorkspace.id));
       setSelectedWorkspaceId("");
       setOpenedWorkspace(null);
@@ -234,8 +209,12 @@ export function WorkspaceManagementPage() {
         </div>
       </section>
 
-      {message ? <div className="alert alert-success">{message}</div> : null}
-      {errorMessage ? <div className="alert alert-error">{errorMessage}</div> : null}
+      <section
+        className={errorMessage ? "workspace-status-bar workspace-status-bar--error" : "workspace-status-bar"}
+        role="status"
+      >
+        <span>{isLoading ? "Loading..." : errorMessage || message || "Ready to manage workspaces."}</span>
+      </section>
 
       <section className="workspace-layout">
         <section className="workspace-list-panel">
@@ -444,7 +423,7 @@ function WorkspaceDetail({
   onOpen
 }: {
   workspace: Workspace;
-  onAction: (action: "start" | "stop" | "restart" | "retry" | "complete" | "fail") => void;
+  onAction: (action: WorkspaceAction) => void;
   onDelete: () => void;
   onOpen: () => void;
 }) {
@@ -585,14 +564,21 @@ function toFormState(workspace: Workspace): WorkspaceFormState {
   };
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(new Date(value));
+function toCreateInput(formState: WorkspaceFormState): CreateWorkspaceInput {
+  return {
+    name: formState.name,
+    description: formState.description,
+    templateId: formState.templateId,
+    resourceProfile: formState.resourceProfile,
+    region: formState.region
+  };
 }
 
-function toFieldErrors(details: NonNullable<ApiErrorResponse["details"]>) {
+function toUpdateInput(formState: WorkspaceFormState): UpdateWorkspaceInput {
+  return toCreateInput(formState);
+}
+
+function toFieldErrors(details: WorkspaceValidationIssue[]) {
   return details.reduce<Record<string, string>>((errors, item) => {
     errors[item.field] = item.message;
     return errors;
@@ -603,41 +589,9 @@ function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Request failed.";
 }
 
-async function apiRequest<T = unknown>(
-  path: string,
-  options: {
-    method?: "GET" | "POST" | "PATCH" | "DELETE";
-    body?: unknown;
-  } = {}
-) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers: options.body ? { "Content-Type": "application/json" } : undefined,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const body = (await response.json()) as ApiErrorResponse;
-
-  if (!response.ok) {
-    if (body.details?.length) {
-      throw new ApiValidationError(body.details);
-    }
-
-    throw new Error(body.error || "Request failed.");
-  }
-
-  return body as T;
-}
-
-class ApiValidationError extends Error {
-  details: NonNullable<ApiErrorResponse["details"]>;
-
-  constructor(details: NonNullable<ApiErrorResponse["details"]>) {
-    super("Validation failed");
-    this.details = details;
-  }
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
 }

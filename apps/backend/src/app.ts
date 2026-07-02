@@ -2,9 +2,9 @@ import express from "express";
 
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
-import { workspaceRouter } from "./modules/workspace-management/workspace.routes.js";
 import { agentsRouter } from "./routes/agents.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
+import { workspacesRouter } from "./routes/workspaces.routes.js";
 import { workflowsRouter } from "./routes/workflows.routes.js";
 
 export const app = express();
@@ -20,8 +20,8 @@ app.options("*", (_request, response) => {
 });
 app.use(express.json());
 app.use("/api", healthRouter);
-app.use("/api", workspaceRouter);
 app.use("/api/agents", agentsRouter);
+app.use("/api/workspaces", workspacesRouter);
 app.use("/api/workflows", workflowsRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

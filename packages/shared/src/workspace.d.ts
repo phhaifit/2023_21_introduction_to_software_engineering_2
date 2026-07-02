@@ -1,6 +1,6 @@
 export type WorkspaceStatus = "PENDING" | "PROVISIONING" | "RUNNING" | "FAILED" | "STOPPED";
-
 export type WorkspaceResourceProfile = "Starter" | "Standard" | "Performance";
+export type WorkspaceAction = "start" | "stop" | "restart" | "retry" | "complete" | "fail";
 
 export interface WorkspaceConfig {
   templateId: string;
@@ -23,7 +23,7 @@ export interface Workspace {
   updatedAt: string;
 }
 
-export interface CreateWorkspaceRequest {
+export interface CreateWorkspaceInput {
   name: string;
   description?: string;
   templateId: string;
@@ -31,7 +31,7 @@ export interface CreateWorkspaceRequest {
   region?: string;
 }
 
-export interface UpdateWorkspaceRequest {
+export interface UpdateWorkspaceInput {
   name?: string;
   description?: string;
   templateId?: string;
@@ -39,11 +39,14 @@ export interface UpdateWorkspaceRequest {
   region?: string;
 }
 
-export interface FailWorkspaceRequest {
+export interface FailWorkspaceInput {
   reason?: string;
 }
 
-export interface WorkspaceValidationError {
+export interface WorkspaceValidationIssue {
   field: string;
   message: string;
 }
+
+export declare const WORKSPACE_STATUSES: WorkspaceStatus[];
+export declare const WORKSPACE_RESOURCE_PROFILES: WorkspaceResourceProfile[];
