@@ -18,8 +18,6 @@ type AgentRow = {
   updated_at: Date;
 };
 
-const DEFAULT_WORKSPACE_ID = process.env.DEFAULT_WORKSPACE_ID ?? "default-workspace";
-
 function mapRowToAgent(row: AgentRow): Agent {
   return {
     id: row.id,
@@ -33,29 +31,52 @@ function mapRowToAgent(row: AgentRow): Agent {
   };
 }
 
-export async function listAgents(): Promise<Agent[]> {
+export async function listAgents(workspaceId: string): Promise<Agent[]> {
   const rows = await db<AgentRow>("agents")
     .select("*")
-    .where({ workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ workspace_id: workspaceId })
     .orderBy("created_at", "desc");
 
   return rows.map(mapRowToAgent);
 }
 
-export async function getAgentById(id: string): Promise<Agent | undefined> {
+export async function getAgentById(workspaceId: string, id: string): Promise<Agent | undefined> {
   const row = await db<AgentRow>("agents")
     .select("*")
-    .where({ id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id, workspace_id: workspaceId })
     .first();
 
   return row ? mapRowToAgent(row) : undefined;
 }
 
-export async function createAgent(input: CreateAgentInput): Promise<Agent> {
+export async function countAgentsByWorkspace(workspaceId: string): Promise<number> {
+  const row = await db<AgentRow>("agents")
+    .where({ workspace_id: workspaceId })
+    .count<{ count: string }>("id as count")
+    .first();
+
+  return Number(row?.count ?? 0);
+}
+
+export async function getAgentByName(workspaceId: string, name: string): Promise<Agent | undefined> {
+  const row = await db<AgentRow>("agents")
+    .select("*")
+    .where({ workspace_id: workspaceId })
+    .whereRaw("lower(name) = lower(?)", [name.trim()])
+    .first();
+
+  return row ? mapRowToAgent(row) : undefined;
+}
+
+export async function createAgent(
+  workspaceId: string,
+  input: CreateAgentInput,
+  actorUserId: string
+): Promise<Agent> {
   const now = new Date();
   const row: AgentRow = {
     id: createUuid(),
-    workspace_id: DEFAULT_WORKSPACE_ID,
+    workspace_id: workspaceId,
     name: input.name,
     role: input.role,
     model: input.model,
@@ -63,8 +84,8 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     status: input.status,
     directory_path: null,
     skill_file_path: null,
-    created_by_user_id: null,
-    updated_by_user_id: null,
+    created_by_user_id: actorUserId,
+    updated_by_user_id: actorUserId,
     created_at: now,
     updated_at: now
   };
@@ -73,15 +94,21 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
   return mapRowToAgent(row);
 }
 
-export async function updateAgent(id: string, input: UpdateAgentInput): Promise<Agent | undefined> {
-  const current = await getAgentById(id);
+export async function updateAgent(
+  workspaceId: string,
+  id: string,
+  input: UpdateAgentInput,
+  actorUserId: string
+): Promise<Agent | undefined> {
+  const current = await getAgentById(workspaceId, id);
 
   if (!current) {
     return undefined;
   }
 
   const updates: Partial<AgentRow> = {
-    updated_at: new Date()
+    updated_at: new Date(),
+    updated_by_user_id: actorUserId
   };
 
   if (typeof input.name === "string") {
@@ -105,22 +132,22 @@ export async function updateAgent(id: string, input: UpdateAgentInput): Promise<
   }
 
   await db<AgentRow>("agents")
-    .where({ id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id, workspace_id: workspaceId })
     .update(updates);
 
-  const updated = await getAgentById(id);
+  const updated = await getAgentById(workspaceId, id);
   return updated ?? current;
 }
 
-export async function deleteAgent(id: string): Promise<Agent | undefined> {
-  const current = await getAgentById(id);
+export async function deleteAgent(workspaceId: string, id: string): Promise<Agent | undefined> {
+  const current = await getAgentById(workspaceId, id);
 
   if (!current) {
     return undefined;
   }
 
   await db<AgentRow>("agents")
-    .where({ id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id, workspace_id: workspaceId })
     .delete();
 
   return current;

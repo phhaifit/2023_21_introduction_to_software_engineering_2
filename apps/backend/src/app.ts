@@ -12,7 +12,10 @@ export const app = express();
 
 app.use((_request, response, next) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Workspace-Id, X-Workspace-Role"
+  );
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   next();
 });
