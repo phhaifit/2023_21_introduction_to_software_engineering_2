@@ -79,6 +79,14 @@ function createTestService(options: {
       if (options.logoutError) {
         throw options.logoutError;
       }
+    },
+
+    async resolveCurrentUser() {
+      return {
+        id: "user-123",
+        email: "current.user@example.com",
+        status: "active"
+      };
     }
   };
 
@@ -287,7 +295,7 @@ test("logout handler maps safe service errors", async () => {
   }
 });
 
-test("auth router exposes only register, login, and logout POST routes", () => {
+test("auth router exposes register, login, logout, and me routes", () => {
   const fake = createTestService();
   const router = createAuthRouter(createAuthController(fake.service));
   const routes = (router.stack as unknown as RouteLayer[])
@@ -300,7 +308,7 @@ test("auth router exposes only register, login, and logout POST routes", () => {
   assert.deepEqual(routes, [
     { path: "/register", methods: { post: true } },
     { path: "/login", methods: { post: true } },
-    { path: "/logout", methods: { post: true } }
+    { path: "/logout", methods: { post: true } },
+    { path: "/me", methods: { get: true } }
   ]);
-  assert.equal(routes.some((route) => route.path === "/me"), false);
 });
