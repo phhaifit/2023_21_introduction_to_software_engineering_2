@@ -14,6 +14,7 @@ import {
   login,
   logout,
   register,
+  resolveCurrentUser,
   type AuthServiceErrorCode
 } from "../services/auth.service.js";
 
@@ -21,6 +22,7 @@ export interface AuthControllerService {
   register(input: RegisterRequest): Promise<PublicUserResponse>;
   login(input: LoginRequest): Promise<AuthResponse>;
   logout(accessToken: string): Promise<void>;
+  resolveCurrentUser(accessToken: string): Promise<PublicUserResponse>;
 }
 
 interface SafeAuthErrorResponse {
@@ -31,6 +33,7 @@ export interface AuthController {
   register: RequestHandler;
   login: RequestHandler;
   logout: RequestHandler;
+  me: RequestHandler;
 }
 
 const INTERNAL_SERVER_ERROR_CODE = "INTERNAL_SERVER_ERROR";
@@ -39,7 +42,8 @@ const INTERNAL_SERVER_ERROR_MESSAGE = "Internal Server Error";
 const defaultAuthControllerService: AuthControllerService = {
   register,
   login,
-  logout
+  logout,
+  resolveCurrentUser
 };
 
 export function createAuthController(
@@ -70,6 +74,15 @@ export function createAuthController(
       } catch (error) {
         sendAuthError(response, error);
       }
+    },
+
+    me: async (request, response) => {
+      if (!request.authenticatedUser) {
+        sendAuthError(response, unauthorizedError());
+        return;
+      }
+
+      response.json({ user: request.authenticatedUser });
     }
   };
 }
@@ -113,7 +126,7 @@ function unauthorizedError(): AuthServiceError {
   return new AuthServiceError(AUTH_ERROR_CODES.UNAUTHORIZED, "Authentication required.");
 }
 
-function sendAuthError(response: Response, error: unknown): void {
+export function sendAuthError(response: Response, error: unknown): void {
   const mappedError = mapAuthError(error);
   response.status(mappedError.status).json(mappedError.body);
 }
