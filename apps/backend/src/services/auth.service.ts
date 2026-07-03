@@ -6,7 +6,7 @@ import type {
   PublicUserResponse,
   RegisterRequest
 } from "../dto/authentication/index.js";
-import type { User, UserStatus } from "../entities/index.js";
+import type { AuthToken, User, UserStatus } from "../entities/index.js";
 import type { CreateUserInput } from "../repositories/index.js";
 import { DuplicateUserEmailError } from "../repositories/user-repository.error.js";
 import {
@@ -25,8 +25,11 @@ export type AuthServiceErrorCode =
   | typeof AUTH_ERROR_CODES.INVALID_CREDENTIALS
   | typeof AUTH_ERROR_CODES.ACCOUNT_DISABLED
   | typeof AUTH_ERROR_CODES.ACCOUNT_LOCKED
+  | typeof AUTH_ERROR_CODES.UNAUTHORIZED
   | "REGISTER_FAILED"
-  | "LOGIN_FAILED";
+  | "LOGIN_FAILED"
+  | "CURRENT_USER_FAILED"
+  | "LOGOUT_FAILED";
 
 export class AuthServiceError extends Error {
   constructor(
@@ -42,12 +45,15 @@ export class AuthServiceError extends Error {
 export interface AuthUserRepository {
   existsByEmail(email: string): Promise<boolean>;
   findByEmail(email: string): Promise<User | null>;
+  findById(id: string): Promise<User | null>;
   createUser(input: CreateUserInput): Promise<User>;
 }
 
 export interface AuthService {
   register(input: RegisterRequest): Promise<PublicUserResponse>;
   login(input: LoginRequest): Promise<AuthResponse>;
+  resolveCurrentUser(accessToken: string): Promise<PublicUserResponse>;
+  logout(accessToken: string): Promise<void>;
 }
 
 export interface CreateAuthServiceOptions {
@@ -55,6 +61,8 @@ export interface CreateAuthServiceOptions {
   hashPassword?: (plaintextPassword: string) => Promise<string>;
   verifyPassword?: (plaintextPassword: string, passwordHash: string) => Promise<boolean>;
   createToken?: (userId: string) => Promise<CreateTokenResult>;
+  validateToken?: (accessToken: string) => Promise<AuthToken | null>;
+  invalidateToken?: (accessToken: string) => Promise<boolean>;
 }
 
 let defaultUserRepository: AuthUserRepository | null = null;
@@ -69,6 +77,7 @@ async function loadDefaultUserRepository(): Promise<AuthUserRepository> {
   defaultUserRepository = {
     existsByEmail: repositoryModule.existsByEmail,
     findByEmail: repositoryModule.findByEmail,
+    findById: repositoryModule.findById,
     createUser: repositoryModule.createUser
   };
 
@@ -78,6 +87,16 @@ async function loadDefaultUserRepository(): Promise<AuthUserRepository> {
 async function createDefaultToken(userId: string): Promise<CreateTokenResult> {
   const tokenServiceModule = await import("./token.service.js");
   return tokenServiceModule.createToken(userId);
+}
+
+async function validateDefaultToken(accessToken: string): Promise<AuthToken | null> {
+  const tokenServiceModule = await import("./token.service.js");
+  return tokenServiceModule.validateToken(accessToken);
+}
+
+async function invalidateDefaultToken(accessToken: string): Promise<boolean> {
+  const tokenServiceModule = await import("./token.service.js");
+  return tokenServiceModule.invalidateToken(accessToken);
 }
 
 function assertRegisterInput(input: RegisterRequest): void {
@@ -97,6 +116,12 @@ function assertLoginInput(input: LoginRequest): void {
 
   if (!normalizeEmail(input.email) || input.password.length === 0) {
     throw toInvalidCredentialsError();
+  }
+}
+
+function assertAccessTokenInput(accessToken: string): void {
+  if (typeof accessToken !== "string" || accessToken.trim().length === 0) {
+    throw toUnauthorizedError();
   }
 }
 
@@ -168,11 +193,25 @@ function toLoginFailedError(): AuthServiceError {
   return new AuthServiceError("LOGIN_FAILED", "Login failed.");
 }
 
+function toUnauthorizedError(): AuthServiceError {
+  return new AuthServiceError(AUTH_ERROR_CODES.UNAUTHORIZED, "Authentication required.");
+}
+
+function toCurrentUserFailedError(): AuthServiceError {
+  return new AuthServiceError("CURRENT_USER_FAILED", "Current user resolution failed.");
+}
+
+function toLogoutFailedError(): AuthServiceError {
+  return new AuthServiceError("LOGOUT_FAILED", "Logout failed.");
+}
+
 export function createAuthService(options: CreateAuthServiceOptions = {}): AuthService {
   const injectedRepository = options.userRepository;
   const hashPassword = options.hashPassword ?? hashPasswordValue;
   const verifyPassword = options.verifyPassword ?? verifyPasswordValue;
   const createToken = options.createToken ?? createDefaultToken;
+  const validateToken = options.validateToken ?? validateDefaultToken;
+  const invalidateToken = options.invalidateToken ?? invalidateDefaultToken;
 
   return {
     async register(input: RegisterRequest): Promise<PublicUserResponse> {
@@ -247,6 +286,49 @@ export function createAuthService(options: CreateAuthServiceOptions = {}): AuthS
 
         throw toLoginFailedError();
       }
+    },
+
+    async resolveCurrentUser(accessToken: string): Promise<PublicUserResponse> {
+      assertAccessTokenInput(accessToken);
+
+      try {
+        const token = await validateToken(accessToken);
+
+        if (!token) {
+          throw toUnauthorizedError();
+        }
+
+        const userRepository = injectedRepository ?? await loadDefaultUserRepository();
+        const user = await userRepository.findById(token.userId);
+
+        if (!user) {
+          throw toUnauthorizedError();
+        }
+
+        assertActiveUserStatus(user.status);
+
+        return mapUserToPublicUserResponse(user);
+      } catch (error) {
+        if (error instanceof AuthServiceError) {
+          throw error;
+        }
+
+        throw toCurrentUserFailedError();
+      }
+    },
+
+    async logout(accessToken: string): Promise<void> {
+      assertAccessTokenInput(accessToken);
+
+      try {
+        await invalidateToken(accessToken);
+      } catch (error) {
+        if (error instanceof AuthServiceError) {
+          throw error;
+        }
+
+        throw toLogoutFailedError();
+      }
     }
   };
 }
@@ -255,3 +337,5 @@ const defaultAuthService = createAuthService();
 
 export const register = defaultAuthService.register;
 export const login = defaultAuthService.login;
+export const resolveCurrentUser = defaultAuthService.resolveCurrentUser;
+export const logout = defaultAuthService.logout;

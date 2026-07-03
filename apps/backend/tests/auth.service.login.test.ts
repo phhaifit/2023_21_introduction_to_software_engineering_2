@@ -65,6 +65,10 @@ function createFakeRepository(options: {
       return options.user === undefined ? createUser() : options.user;
     },
 
+    async findById() {
+      return null;
+    },
+
     async createUser(input: CreateUserInput) {
       return createUser({
         email: input.email,

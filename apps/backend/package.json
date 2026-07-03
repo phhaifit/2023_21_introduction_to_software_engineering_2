@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "test": "tsc -p tests/tsconfig.json --noEmit && node --import tsx tests/password-encoder.service.test.ts && node --import tsx tests/token.service.test.ts && node --import tsx tests/auth.service.register.test.ts && node --import tsx tests/auth.service.login.test.ts",
+    "test": "tsc -p tests/tsconfig.json --noEmit && node --import tsx tests/password-encoder.service.test.ts && node --import tsx tests/token.service.test.ts && node --import tsx tests/auth.service.register.test.ts && node --import tsx tests/auth.service.login.test.ts && node --import tsx tests/auth.service.logout-token-validation.test.ts",
     "prebuild": "npm run prisma:generate",
     "build": "tsc -p tsconfig.json",
     "pretypecheck": "npm run prisma:generate",
