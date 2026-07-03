@@ -58,6 +58,10 @@ function createFakeRepository(options: {
       return null;
     },
 
+    async findById() {
+      return null;
+    },
+
     async createUser(input) {
       createUserCalls.push(input);
 
