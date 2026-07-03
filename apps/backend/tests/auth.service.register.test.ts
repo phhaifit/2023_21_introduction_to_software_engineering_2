@@ -54,6 +54,10 @@ function createFakeRepository(options: {
       return options.existingEmail ?? false;
     },
 
+    async findByEmail() {
+      return null;
+    },
+
     async createUser(input) {
       createUserCalls.push(input);
 
