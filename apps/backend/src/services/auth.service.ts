@@ -1,10 +1,19 @@
 import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
 
-import type { PublicUserResponse, RegisterRequest } from "../dto/authentication/index.js";
-import type { User } from "../entities/index.js";
+import type {
+  AuthResponse,
+  LoginRequest,
+  PublicUserResponse,
+  RegisterRequest
+} from "../dto/authentication/index.js";
+import type { User, UserStatus } from "../entities/index.js";
 import type { CreateUserInput } from "../repositories/index.js";
 import { DuplicateUserEmailError } from "../repositories/user-repository.error.js";
-import { hashPassword as hashPasswordValue } from "./password-encoder.service.js";
+import {
+  hashPassword as hashPasswordValue,
+  verifyPassword as verifyPasswordValue
+} from "./password-encoder.service.js";
+import type { CreateTokenResult } from "./token.service.js";
 
 const MIN_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,7 +22,11 @@ export type AuthServiceErrorCode =
   | "INVALID_EMAIL"
   | "WEAK_PASSWORD"
   | typeof AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS
-  | "REGISTER_FAILED";
+  | typeof AUTH_ERROR_CODES.INVALID_CREDENTIALS
+  | typeof AUTH_ERROR_CODES.ACCOUNT_DISABLED
+  | typeof AUTH_ERROR_CODES.ACCOUNT_LOCKED
+  | "REGISTER_FAILED"
+  | "LOGIN_FAILED";
 
 export class AuthServiceError extends Error {
   constructor(
@@ -28,16 +41,20 @@ export class AuthServiceError extends Error {
 
 export interface AuthUserRepository {
   existsByEmail(email: string): Promise<boolean>;
+  findByEmail(email: string): Promise<User | null>;
   createUser(input: CreateUserInput): Promise<User>;
 }
 
 export interface AuthService {
   register(input: RegisterRequest): Promise<PublicUserResponse>;
+  login(input: LoginRequest): Promise<AuthResponse>;
 }
 
 export interface CreateAuthServiceOptions {
   userRepository?: AuthUserRepository;
   hashPassword?: (plaintextPassword: string) => Promise<string>;
+  verifyPassword?: (plaintextPassword: string, passwordHash: string) => Promise<boolean>;
+  createToken?: (userId: string) => Promise<CreateTokenResult>;
 }
 
 let defaultUserRepository: AuthUserRepository | null = null;
@@ -51,10 +68,16 @@ async function loadDefaultUserRepository(): Promise<AuthUserRepository> {
 
   defaultUserRepository = {
     existsByEmail: repositoryModule.existsByEmail,
+    findByEmail: repositoryModule.findByEmail,
     createUser: repositoryModule.createUser
   };
 
   return defaultUserRepository;
+}
+
+async function createDefaultToken(userId: string): Promise<CreateTokenResult> {
+  const tokenServiceModule = await import("./token.service.js");
+  return tokenServiceModule.createToken(userId);
 }
 
 function assertRegisterInput(input: RegisterRequest): void {
@@ -64,6 +87,16 @@ function assertRegisterInput(input: RegisterRequest): void {
 
   if (typeof input.password !== "string") {
     throw new AuthServiceError("WEAK_PASSWORD", "Password does not meet requirements.", "password");
+  }
+}
+
+function assertLoginInput(input: LoginRequest): void {
+  if (!input || typeof input.email !== "string" || typeof input.password !== "string") {
+    throw toInvalidCredentialsError();
+  }
+
+  if (!normalizeEmail(input.email) || input.password.length === 0) {
+    throw toInvalidCredentialsError();
   }
 }
 
@@ -89,6 +122,28 @@ function assertValidPassword(password: string): void {
   }
 }
 
+function assertLoginEmail(email: string): void {
+  if (!EMAIL_PATTERN.test(email)) {
+    throw toInvalidCredentialsError();
+  }
+}
+
+function assertActiveUserStatus(status: UserStatus): void {
+  if (status === "active") {
+    return;
+  }
+
+  if (status === "disabled") {
+    throw new AuthServiceError(AUTH_ERROR_CODES.ACCOUNT_DISABLED, "Account is disabled.");
+  }
+
+  if (status === "locked") {
+    throw new AuthServiceError(AUTH_ERROR_CODES.ACCOUNT_LOCKED, "Account is locked.");
+  }
+
+  throw toLoginFailedError();
+}
+
 function mapUserToPublicUserResponse(user: User): PublicUserResponse {
   return {
     id: user.id,
@@ -105,9 +160,19 @@ function toRegisterFailedError(): AuthServiceError {
   return new AuthServiceError("REGISTER_FAILED", "Registration failed.");
 }
 
+function toInvalidCredentialsError(): AuthServiceError {
+  return new AuthServiceError(AUTH_ERROR_CODES.INVALID_CREDENTIALS, "Invalid email or password.");
+}
+
+function toLoginFailedError(): AuthServiceError {
+  return new AuthServiceError("LOGIN_FAILED", "Login failed.");
+}
+
 export function createAuthService(options: CreateAuthServiceOptions = {}): AuthService {
   const injectedRepository = options.userRepository;
   const hashPassword = options.hashPassword ?? hashPasswordValue;
+  const verifyPassword = options.verifyPassword ?? verifyPasswordValue;
+  const createToken = options.createToken ?? createDefaultToken;
 
   return {
     async register(input: RegisterRequest): Promise<PublicUserResponse> {
@@ -143,6 +208,45 @@ export function createAuthService(options: CreateAuthServiceOptions = {}): AuthS
 
         throw toRegisterFailedError();
       }
+    },
+
+    async login(input: LoginRequest): Promise<AuthResponse> {
+      assertLoginInput(input);
+
+      const normalizedEmail = normalizeEmail(input.email);
+
+      assertLoginEmail(normalizedEmail);
+
+      try {
+        const userRepository = injectedRepository ?? await loadDefaultUserRepository();
+        const user = await userRepository.findByEmail(normalizedEmail);
+
+        if (!user) {
+          throw toInvalidCredentialsError();
+        }
+
+        const isPasswordValid = await verifyPassword(input.password, user.passwordHash);
+
+        if (!isPasswordValid) {
+          throw toInvalidCredentialsError();
+        }
+
+        assertActiveUserStatus(user.status);
+
+        const token = await createToken(user.id);
+
+        return {
+          user: mapUserToPublicUserResponse(user),
+          accessToken: token.accessToken,
+          expiresAt: token.expiresAt.toISOString()
+        };
+      } catch (error) {
+        if (error instanceof AuthServiceError) {
+          throw error;
+        }
+
+        throw toLoginFailedError();
+      }
     }
   };
 }
@@ -150,3 +254,4 @@ export function createAuthService(options: CreateAuthServiceOptions = {}): AuthS
 const defaultAuthService = createAuthService();
 
 export const register = defaultAuthService.register;
+export const login = defaultAuthService.login;
