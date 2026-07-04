@@ -65,11 +65,12 @@
   margin: 10px 0 0;
 }
 
-.logout-placeholder-button:disabled {
+.main-logout-button:disabled {
   cursor: not-allowed;
+  opacity: 0.68;
 }
 
-.logout-placeholder-button {
+.main-logout-button {
   border: 0;
   border-radius: 8px;
   font: inherit;
@@ -94,11 +95,15 @@
   padding: 16px 20px;
 }
 
-.logout-placeholder-button {
+.main-logout-button {
   background: #e8eef7;
   color: #2f4664;
   min-height: 40px;
   padding: 0 18px;
+}
+
+.main-logout-button:not(:disabled):hover {
+  background: #dbe7f6;
 }
 
 .main-application-content {
@@ -127,11 +132,83 @@
   font-size: 0.9375rem;
 }
 
-.main-application-actions {
-  display: flex;
-  flex-wrap: wrap;
+.main-application-eyebrow {
+  color: #2563eb;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.main-user-details {
+  display: grid;
   gap: 12px;
-  margin-top: 18px;
+  margin: 24px 0 0;
+}
+
+.main-user-details div {
+  background: #f8fbff;
+  border: 1px solid #d7e3f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.main-user-details dt {
+  color: #5b7089;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.main-user-details dd {
+  color: #10243f;
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.auth-guard-shell {
+  align-items: center;
+  background: #eef5fb;
+  display: flex;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth-guard-panel {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 0 auto;
+  max-width: 420px;
+  padding: 32px;
+  text-align: center;
+}
+
+.auth-guard-panel h1 {
+  color: #10243f;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.auth-guard-panel p {
+  color: #5b7089;
+  margin: 0;
+}
+
+.auth-guard-spinner {
+  border: 3px solid #d7e3f0;
+  border-radius: 999px;
+  border-top-color: #2563eb;
+  height: 36px;
+  width: 36px;
 }
 
 @media (max-width: 640px) {
@@ -153,22 +230,4 @@
     align-items: flex-start;
     flex-direction: column;
   }
-}
-
-
-.main-application-link {
-  align-items: center;
-  background: #1d4ed8;
-  border-radius: 8px;
-  color: #ffffff;
-  display: inline-flex;
-  font-weight: 800;
-  margin-top: 18px;
-  min-height: 42px;
-  padding: 0 18px;
-  text-decoration: none;
-}
-
-.main-application-link:hover {
-  background: #1e40af;
 }
