@@ -9,16 +9,37 @@ export interface RegisterFormPayload {
   password: string;
 }
 
+export interface LoginFormValues {
+  email: string;
+  password: string;
+}
+
+export interface LoginFormPayload {
+  email: string;
+  password: string;
+}
+
 export interface RegisterValidationErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
 }
 
+export interface LoginValidationErrors {
+  email?: string;
+  password?: string;
+}
+
 export interface RegisterValidationResult {
   isValid: boolean;
   payload?: RegisterFormPayload;
   errors: RegisterValidationErrors;
+}
+
+export interface LoginValidationResult {
+  isValid: boolean;
+  payload?: LoginFormPayload;
+  errors: LoginValidationErrors;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,6 +52,12 @@ export const REGISTER_VALIDATION_MESSAGES = {
   passwordWeak: "Password must be at least 8 characters and include uppercase, lowercase, and a number.",
   confirmPasswordRequired: "Confirm password is required.",
   confirmPasswordMismatch: "Passwords do not match."
+} as const;
+
+export const LOGIN_VALIDATION_MESSAGES = {
+  emailRequired: "Email is required.",
+  emailInvalid: "Enter a valid email address.",
+  passwordRequired: "Password is required."
 } as const;
 
 export function validateRegisterForm(values: RegisterFormValues): RegisterValidationResult {
@@ -53,6 +80,34 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterValida
     errors.confirmPassword = REGISTER_VALIDATION_MESSAGES.confirmPasswordRequired;
   } else if (values.confirmPassword !== values.password) {
     errors.confirmPassword = REGISTER_VALIDATION_MESSAGES.confirmPasswordMismatch;
+  }
+
+  const isValid = Object.keys(errors).length === 0;
+
+  return {
+    isValid,
+    errors,
+    payload: isValid
+      ? {
+          email: normalizedEmail,
+          password: values.password
+        }
+      : undefined
+  };
+}
+
+export function validateLoginForm(values: LoginFormValues): LoginValidationResult {
+  const normalizedEmail = normalizeEmail(values.email);
+  const errors: LoginValidationErrors = {};
+
+  if (!normalizedEmail) {
+    errors.email = LOGIN_VALIDATION_MESSAGES.emailRequired;
+  } else if (!EMAIL_PATTERN.test(normalizedEmail)) {
+    errors.email = LOGIN_VALIDATION_MESSAGES.emailInvalid;
+  }
+
+  if (!values.password) {
+    errors.password = LOGIN_VALIDATION_MESSAGES.passwordRequired;
   }
 
   const isValid = Object.keys(errors).length === 0;
