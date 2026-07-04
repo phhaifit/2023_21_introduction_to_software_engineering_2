@@ -16,11 +16,14 @@ export {
   SUBSCRIPTION_STATUSES,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
+  WORKSPACE_OPERATION_ACTIONS,
+  WORKSPACE_OPERATION_STATUSES,
   WORKSPACE_STATUSES
 } from "./subscription.js";
 export type {
   AdminSubscriptionListItem,
   AdminSubscriptionListResponse,
+  AdminWorkspaceOperationListResponse,
   CheckoutInput,
   CheckoutResponse,
   PaymentStatusResponse,
@@ -32,5 +35,8 @@ export type {
   SubscriptionStatus,
   TransactionStatus,
   TransactionType,
+  WorkspaceOperationAction,
+  WorkspaceOperationStatus,
+  WorkspaceProvisioningOperation,
   WorkspaceStatus
 } from "./subscription.js";

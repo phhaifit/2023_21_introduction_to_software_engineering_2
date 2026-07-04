@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 import { Link } from "react-router-dom";
 
 import "../styles/subscription.css";
+import { DemoRoleSwitcher } from "./DemoRoleSwitcher";
 
 export function SubscriptionShell({ children }: PropsWithChildren) {
   return (
@@ -15,6 +16,7 @@ export function SubscriptionShell({ children }: PropsWithChildren) {
           <Link to="/app/subscription">My subscription</Link>
           <Link to="/app/admin/subscriptions">Admin</Link>
         </nav>
+        <DemoRoleSwitcher />
       </header>
       <section className="subscription-content">{children}</section>
     </main>

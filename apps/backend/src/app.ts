@@ -12,6 +12,7 @@ import {
   plansRouter,
   subscriptionsRouter
 } from "./routes/subscriptions.routes.js";
+import { adminWorkspaceOperationsRouter } from "./routes/workspaceOperations.routes.js";
 
 export const app = express();
 
@@ -24,5 +25,6 @@ app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/mock-payments", mockPaymentsRouter);
 app.use("/api/admin/subscriptions", adminSubscriptionsRouter);
+app.use("/api/admin/workspace-operations", adminWorkspaceOperationsRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

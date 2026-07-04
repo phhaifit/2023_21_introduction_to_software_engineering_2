@@ -6,7 +6,8 @@ import type {
   Plan,
   Subscription,
   TransactionStatus,
-  TransactionType
+  TransactionType,
+  WorkspaceProvisioningOperation
 } from "@ai-agent-platform/shared";
 
 import {
@@ -29,6 +30,10 @@ import {
   type CreateSubscriptionRecord,
   type UpdateSubscriptionRecord
 } from "../repositories/subscriptions.repository.js";
+import {
+  workspaceOperationsRepository,
+  type CreateWorkspaceOperationRecord
+} from "../repositories/workspaceOperations.repository.js";
 
 export type RequestIdentity = {
   userId: string;
@@ -63,10 +68,19 @@ type PaymentTransactionRepository = {
   markFulfilled(id: string): Promise<void>;
 };
 
+type WorkspaceOperationRepository = {
+  createPendingOperation(
+    input: CreateWorkspaceOperationRecord
+  ): Promise<WorkspaceProvisioningOperation>;
+  markCompleted(id: string): Promise<WorkspaceProvisioningOperation | undefined>;
+  markFailed(id: string, failureCode: string): Promise<WorkspaceProvisioningOperation | undefined>;
+};
+
 type PaymentsServiceDependencies = {
   planRepository: PlanRepository;
   subscriptionRepository: SubscriptionRepository;
   transactionRepository: PaymentTransactionRepository;
+  workspaceOperationRepository: WorkspaceOperationRepository;
   paymentGateway: PaymentGateway;
   workspaceProvisioner: WorkspaceProvisioner;
   now: () => Date;
@@ -79,6 +93,7 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
     planRepository,
     subscriptionRepository,
     transactionRepository,
+    workspaceOperationRepository,
     paymentGateway,
     workspaceProvisioner,
     now,
@@ -102,9 +117,37 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       return subscription;
     }
 
+    const action = type === "NEW" ? "PROVISION" : "UPDATE_PLAN";
+
     await subscriptionRepository.updateSubscription(subscription.id, {
       workspaceStatus: "PROVISIONING"
     });
+
+    const operation = await workspaceOperationRepository.createPendingOperation({
+      transactionId: idempotencyKey,
+      subscriptionId: subscription.id,
+      workspaceId: subscription.workspaceId,
+      planId: plan.id,
+      action,
+      idempotencyKey
+    });
+
+    // A terminal operation means this transaction was already fulfilled; reflect the
+    // stored outcome instead of calling the workspace adapter a second time.
+    if (operation.status === "COMPLETED") {
+      return (
+        (await subscriptionRepository.updateSubscription(subscription.id, {
+          workspaceStatus: "ACTIVE"
+        })) ?? subscription
+      );
+    }
+    if (operation.status === "FAILED") {
+      return (
+        (await subscriptionRepository.updateSubscription(subscription.id, {
+          workspaceStatus: "PROVISIONING_FAILED"
+        })) ?? subscription
+      );
+    }
 
     try {
       if (simulateFailure) {
@@ -121,12 +164,17 @@ export function createPaymentsService(dependencies: PaymentsServiceDependencies)
       } else {
         await workspaceProvisioner.updatePlan(input);
       }
+      await workspaceOperationRepository.markCompleted(operation.id);
       return (
         (await subscriptionRepository.updateSubscription(subscription.id, {
           workspaceStatus: "ACTIVE"
         })) ?? subscription
       );
     } catch {
+      await workspaceOperationRepository.markFailed(
+        operation.id,
+        "WORKSPACE_PROVISIONING_FAILED"
+      );
       return (
         (await subscriptionRepository.updateSubscription(subscription.id, {
           workspaceStatus: "PROVISIONING_FAILED"
@@ -312,6 +360,7 @@ export const paymentsService = createPaymentsService({
   planRepository: plansRepository,
   subscriptionRepository: subscriptionsRepository,
   transactionRepository: paymentTransactionsRepository,
+  workspaceOperationRepository: workspaceOperationsRepository,
   paymentGateway: mockPaymentGateway,
   workspaceProvisioner: mockWorkspaceProvisioner,
   now: () => new Date(),

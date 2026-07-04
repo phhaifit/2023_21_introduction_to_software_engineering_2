@@ -45,6 +45,7 @@ const serviceMocks = vi.hoisted(() => ({
   listPlansService: vi.fn(),
   getMySubscriptionService: vi.fn(),
   listAllSubscriptionsService: vi.fn(),
+  listRecentWorkspaceOperationsService: vi.fn(),
   createCheckout: vi.fn(),
   getPaymentStatus: vi.fn(),
   completePayment: vi.fn(),
@@ -56,6 +57,10 @@ vi.mock("./services/subscriptions.service.js", () => ({
   listPlansService: serviceMocks.listPlansService,
   getMySubscriptionService: serviceMocks.getMySubscriptionService,
   listAllSubscriptionsService: serviceMocks.listAllSubscriptionsService
+}));
+
+vi.mock("./services/workspaceOperations.service.js", () => ({
+  listRecentWorkspaceOperationsService: serviceMocks.listRecentWorkspaceOperationsService
 }));
 
 vi.mock("./services/payments.service.js", () => ({
@@ -79,6 +84,23 @@ describe("subscription payment HTTP API", () => {
     serviceMocks.getMySubscriptionService.mockResolvedValue(subscription);
     serviceMocks.listAllSubscriptionsService.mockResolvedValue({
       items: [{ ...subscription, plan: standard }],
+      total: 1
+    });
+    serviceMocks.listRecentWorkspaceOperationsService.mockResolvedValue({
+      items: [
+        {
+          id: "operation-1",
+          transactionId: "transaction-1",
+          subscriptionId: "subscription-1",
+          workspaceId: "default-workspace",
+          planId: "standard",
+          action: "PROVISION",
+          status: "COMPLETED",
+          idempotencyKey: "transaction-1",
+          createdAt: "2026-07-04T08:00:00.000Z",
+          updatedAt: "2026-07-04T08:00:01.000Z"
+        }
+      ],
       total: 1
     });
     serviceMocks.createCheckout.mockResolvedValue({ transaction, reused: false });
@@ -154,5 +176,34 @@ describe("subscription payment HTTP API", () => {
     expect(mine.body.id).toBe("subscription-1");
     expect(all.status).toBe(200);
     expect(all.body.total).toBe(1);
+  });
+
+  it("returns 403 when a member opens the admin subscription API", async () => {
+    const response = await request(app)
+      .get("/api/admin/subscriptions")
+      .set("X-Demo-Role", "member");
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
+    expect(serviceMocks.listAllSubscriptionsService).not.toHaveBeenCalled();
+  });
+
+  it("returns workspace operations to an admin", async () => {
+    const response = await request(app)
+      .get("/api/admin/workspace-operations")
+      .set("X-Demo-Role", "admin");
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+  });
+
+  it("returns 403 for a member reading workspace operations", async () => {
+    const response = await request(app)
+      .get("/api/admin/workspace-operations")
+      .set("X-Demo-Role", "member");
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
+    expect(serviceMocks.listRecentWorkspaceOperationsService).not.toHaveBeenCalled();
   });
 });

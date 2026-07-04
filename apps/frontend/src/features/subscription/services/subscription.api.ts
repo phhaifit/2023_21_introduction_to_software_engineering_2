@@ -1,10 +1,13 @@
 import type {
   AdminSubscriptionListResponse,
+  AdminWorkspaceOperationListResponse,
   CheckoutResponse,
   PaymentStatusResponse,
   Plan,
   Subscription
 } from "@ai-agent-platform/shared";
+
+import { buildDemoRoleHeaders, getStoredDemoRole } from "./demoRole";
 
 export class ApiError extends Error {
   constructor(
@@ -18,10 +21,12 @@ export class ApiError extends Error {
 }
 
 async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const demoHeaders = buildDemoRoleHeaders(import.meta.env.DEV, getStoredDemoRole());
   const response = await fetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...demoHeaders,
       ...init.headers
     }
   });
@@ -71,4 +76,8 @@ export function completeMockPayment(
 
 export function listAdminSubscriptions(): Promise<AdminSubscriptionListResponse> {
   return apiRequest("/api/admin/subscriptions");
+}
+
+export function listAdminWorkspaceOperations(): Promise<AdminWorkspaceOperationListResponse> {
+  return apiRequest("/api/admin/workspace-operations");
 }

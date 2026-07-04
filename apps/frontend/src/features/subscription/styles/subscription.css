@@ -248,6 +248,50 @@ th {
   text-transform: uppercase;
 }
 
+.demo-role-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px dashed rgb(255 255 255 / 45%);
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.demo-role-switcher label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-role-switcher select {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e6;
+  background: white;
+  color: #152033;
+}
+
+.demo-role-switcher__hint {
+  color: rgb(255 255 255 / 65%);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.state-card.warning {
+  color: #7a4b00;
+  background: #fff6e5;
+  border-color: #f0d8a8;
+}
+
+.operation-failure-code {
+  display: inline-block;
+  margin-top: 2px;
+  color: #a12626;
+  font-size: 0.78rem;
+}
+
 @media (max-width: 720px) {
   .subscription-header,
   .subscription-heading {

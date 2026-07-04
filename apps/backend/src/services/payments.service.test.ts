@@ -4,7 +4,8 @@ import type {
   Plan,
   Subscription,
   TransactionStatus,
-  TransactionType
+  TransactionType,
+  WorkspaceProvisioningOperation
 } from "@ai-agent-platform/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -189,10 +190,58 @@ function createHarness() {
     }
   };
 
+  const workspaceOperations: WorkspaceProvisioningOperation[] = [];
+  let operationSequence = 0;
+
+  const workspaceOperationRepository = {
+    async createPendingOperation(input: {
+      transactionId: string;
+      subscriptionId: string;
+      workspaceId: string;
+      planId: string;
+      action: WorkspaceProvisioningOperation["action"];
+      idempotencyKey: string;
+    }) {
+      const existing = workspaceOperations.find(
+        (operation) => operation.idempotencyKey === input.idempotencyKey
+      );
+      if (existing) return existing;
+      const now = new Date("2026-07-02T00:00:00.000Z").toISOString();
+      const operation: WorkspaceProvisioningOperation = {
+        id: `operation-${++operationSequence}`,
+        transactionId: input.transactionId,
+        subscriptionId: input.subscriptionId,
+        workspaceId: input.workspaceId,
+        planId: input.planId,
+        action: input.action,
+        status: "PENDING",
+        idempotencyKey: input.idempotencyKey,
+        createdAt: now,
+        updatedAt: now
+      };
+      workspaceOperations.push(operation);
+      return operation;
+    },
+    async markCompleted(id: string) {
+      const operation = workspaceOperations.find((candidate) => candidate.id === id);
+      if (!operation || operation.status !== "PENDING") return undefined;
+      operation.status = "COMPLETED";
+      return operation;
+    },
+    async markFailed(id: string, failureCode: string) {
+      const operation = workspaceOperations.find((candidate) => candidate.id === id);
+      if (!operation || operation.status !== "PENDING") return undefined;
+      operation.status = "FAILED";
+      operation.failureCode = failureCode;
+      return operation;
+    }
+  };
+
   const service = createPaymentsService({
     planRepository,
     subscriptionRepository,
     transactionRepository,
+    workspaceOperationRepository,
     paymentGateway,
     workspaceProvisioner,
     now: () => new Date("2026-07-02T00:00:00.000Z"),
@@ -207,6 +256,7 @@ function createHarness() {
     provisionCalls,
     provisioningIdempotencyKeys,
     updatePlanCalls,
+    workspaceOperations,
     setProvisioningFailure(value: boolean) {
       provisioningShouldFail = value;
     }
@@ -300,5 +350,68 @@ describe("payments service", () => {
     expect(result.transaction.status).toBe("COMPLETED");
     expect(result.subscription?.status).toBe("ACTIVE");
     expect(result.subscription?.workspaceStatus).toBe("PROVISIONING_FAILED");
+  });
+
+  it("records a completed provision operation for a new purchase", async () => {
+    const checkout = await harness.service.createCheckout(identity, "standard");
+    await harness.service.completePayment(checkout.transaction.id);
+
+    expect(harness.workspaceOperations).toHaveLength(1);
+    expect(harness.workspaceOperations[0]).toMatchObject({
+      action: "PROVISION",
+      status: "COMPLETED",
+      idempotencyKey: checkout.transaction.id
+    });
+  });
+
+  it("records a failed operation when provisioning fails", async () => {
+    harness.setProvisioningFailure(true);
+    const checkout = await harness.service.createCheckout(identity, "premium");
+
+    const result = await harness.service.completePayment(checkout.transaction.id);
+
+    expect(result.transaction.status).toBe("COMPLETED");
+    expect(result.subscription?.status).toBe("ACTIVE");
+    expect(result.subscription?.workspaceStatus).toBe("PROVISIONING_FAILED");
+    expect(harness.workspaceOperations[0]).toMatchObject({
+      status: "FAILED",
+      failureCode: "WORKSPACE_PROVISIONING_FAILED"
+    });
+  });
+
+  it("does not create a workspace operation for a renewal", async () => {
+    const initial = await harness.service.createCheckout(identity, "standard");
+    await harness.service.completePayment(initial.transaction.id);
+    harness.subscriptions[0].endDate = "2026-07-20T00:00:00.000Z";
+
+    const operationCountBeforeRenew = harness.workspaceOperations.length;
+    const renewal = await harness.service.createCheckout(identity, "standard");
+    await harness.service.completePayment(renewal.transaction.id);
+
+    expect(harness.workspaceOperations).toHaveLength(operationCountBeforeRenew);
+  });
+
+  it("creates a single operation when completion runs twice", async () => {
+    const checkout = await harness.service.createCheckout(identity, "standard");
+
+    await harness.service.completePayment(checkout.transaction.id);
+    await harness.service.completePayment(checkout.transaction.id);
+
+    expect(harness.workspaceOperations).toHaveLength(1);
+    expect(harness.provisionCalls).toHaveLength(1);
+  });
+
+  it("records an update-plan operation for an upgrade", async () => {
+    const initial = await harness.service.createCheckout(identity, "standard");
+    await harness.service.completePayment(initial.transaction.id);
+
+    const upgrade = await harness.service.createCheckout(identity, "premium");
+    await harness.service.completePayment(upgrade.transaction.id);
+
+    expect(harness.workspaceOperations.at(-1)).toMatchObject({
+      action: "UPDATE_PLAN",
+      planId: "premium",
+      status: "COMPLETED"
+    });
   });
 });

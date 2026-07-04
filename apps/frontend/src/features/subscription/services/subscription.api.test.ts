@@ -1,10 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DEMO_ROLE_STORAGE_KEY } from "./demoRole";
 import {
   ApiError,
   createCheckout,
+  listAdminSubscriptions,
   listPlans
 } from "./subscription.api";
+
+function stubLocalStorage(): Map<string, string> {
+  const store = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    }
+  });
+  return store;
+}
 
 describe("subscription API client", () => {
   afterEach(() => {
@@ -54,6 +70,27 @@ describe("subscription API client", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ planId: "premium" })
+      })
+    );
+  });
+
+  it("sends the stored demo role header on admin requests", async () => {
+    const store = stubLocalStorage();
+    store.set(DEMO_ROLE_STORAGE_KEY, "member");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listAdminSubscriptions();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/subscriptions",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Demo-Role": "member" })
       })
     );
   });

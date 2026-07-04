@@ -10,5 +10,6 @@ export const env = {
     | "member"
     | "admin",
   paymentProvider,
-  mockPaymentEnabled: paymentProvider === "mock" && nodeEnv !== "production"
+  mockPaymentEnabled: paymentProvider === "mock" && nodeEnv !== "production",
+  demoControlsEnabled: nodeEnv !== "production"
 };

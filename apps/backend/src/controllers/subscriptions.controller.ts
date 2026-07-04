@@ -1,6 +1,5 @@
 import type { RequestHandler } from "express";
 
-import { ApplicationError } from "../errors/applicationError.js";
 import {
   getMySubscriptionService,
   listAllSubscriptionsService,
@@ -36,9 +35,6 @@ export const listAllSubscriptionsController: RequestHandler = async (
   next
 ) => {
   try {
-    if (request.identity.role !== "admin") {
-      throw new ApplicationError("FORBIDDEN", 403, "Admin access required");
-    }
     response.json(await listAllSubscriptionsService(request.identity));
   } catch (error) {
     next(error);

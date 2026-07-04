@@ -12,7 +12,9 @@
     "dev:frontend": "npm run dev --workspace @ai-agent-platform/frontend",
     "dev:backend": "npm run dev --workspace @ai-agent-platform/backend",
     "build": "npm run build --workspaces",
-    "typecheck": "npm run typecheck --workspaces"
+    "typecheck": "npm run typecheck --workspaces",
+    "demo:reset": "npm run db:demo-reset --workspace @ai-agent-platform/backend",
+    "demo:check": "npm test --workspace @ai-agent-platform/backend && npm test --workspace @ai-agent-platform/frontend && npm run typecheck && npm run build && npm run db:demo-check --workspace @ai-agent-platform/backend"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"
