@@ -69,6 +69,23 @@ Generate the Prisma client:
 npm run prisma:generate --workspace @ai-agent-platform/backend
 ```
 
+Run backend Authentication integration tests against an isolated test database.
+`TEST_DATABASE_URL` must not match `DATABASE_URL`, and the database name must
+clearly identify it as test data, for example `ai_agent_platform_test`:
+
+```sh
+export TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ai_agent_platform_test?schema=public"
+DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:migrate:deploy --workspace @ai-agent-platform/backend
+npm run test:auth:integration --workspace @ai-agent-platform/backend
+```
+
+The full backend test suite runs unit tests plus Authentication integration
+tests, so it also requires `TEST_DATABASE_URL`:
+
+```sh
+npm test --workspace @ai-agent-platform/backend
+```
+
 Connection details for TablePlus or any other client:
 
 - Host: `localhost`
