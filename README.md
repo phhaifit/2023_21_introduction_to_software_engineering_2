@@ -126,7 +126,7 @@ POST /api/workspaces/:workspaceId/fail
 ```
 
 The frontend reads `VITE_API_BASE_URL` from the environment and defaults to
-`http://localhost:3000` through `.env.example`.
+`/api`; the Vite dev proxy forwards `/api` to `http://localhost:3000`.
 
 Current implementation uses in-memory data to make the feature testable before
 database, authentication, container provisioning, and OpenClaw integration are
