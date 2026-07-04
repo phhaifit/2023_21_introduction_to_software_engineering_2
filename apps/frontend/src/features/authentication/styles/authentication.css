@@ -14,8 +14,7 @@
   width: 100%;
 }
 
-.auth-brand,
-.main-application-brand {
+.auth-brand {
   align-items: center;
   color: #10243f;
   display: flex;
@@ -28,8 +27,7 @@
   margin-bottom: 24px;
 }
 
-.auth-brand__mark,
-.main-application-brand__mark {
+.auth-brand__mark {
   align-items: center;
   background: #1d4ed8;
   border-radius: 10px;
@@ -53,9 +51,9 @@
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
 }
 
-.main-application-content h1 {
+.main-application-content h2 {
   color: #10243f;
-  font-size: 1.875rem;
+  font-size: 1.55rem;
   line-height: 1.2;
   margin: 0;
 }
@@ -63,18 +61,6 @@
 .main-application-content p {
   color: #5b7089;
   margin: 10px 0 0;
-}
-
-.main-logout-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.68;
-}
-
-.main-logout-button {
-  border: 0;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 800;
 }
 
 .main-application-shell {
@@ -89,21 +75,10 @@
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 8px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin: 0 auto;
   max-width: 1120px;
   padding: 16px 20px;
-}
-
-.main-logout-button {
-  background: #e8eef7;
-  color: #2f4664;
-  min-height: 40px;
-  padding: 0 18px;
-}
-
-.main-logout-button:not(:disabled):hover {
-  background: #dbe7f6;
 }
 
 .main-application-content {

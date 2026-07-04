@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { AppSidebar } from "../../../app/components/AppSidebar";
+import { AppTopBar } from "../../../app/components/AppTopBar";
 import {
   WORKSPACE_RESOURCE_PROFILES,
   WORKSPACE_STATUSES,
@@ -49,6 +51,7 @@ const emptyFormState: WorkspaceFormState = {
 };
 
 export function WorkspaceManagementPage() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -191,8 +194,15 @@ export function WorkspaceManagementPage() {
   }
 
   return (
-    <main className="workspace-page">
-      <section className="workspace-hero">
+    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
+      <AppTopBar
+        collapsed={isSidebarCollapsed}
+        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
+      />
+      <AppSidebar collapsed={isSidebarCollapsed} />
+
+      <main className="app-page-content workspace-page">
+        <section className="workspace-hero">
         <div>
           <p className="eyebrow">Workspace Management</p>
           <h1>Virtual workspace operations</h1>
@@ -209,14 +219,14 @@ export function WorkspaceManagementPage() {
         </div>
       </section>
 
-      <section
-        className={errorMessage ? "workspace-status-bar workspace-status-bar--error" : "workspace-status-bar"}
-        role="status"
-      >
-        <span>{isLoading ? "Loading..." : errorMessage || message || "Ready to manage workspaces."}</span>
-      </section>
+        <section
+          className={errorMessage ? "workspace-status-bar workspace-status-bar--error" : "workspace-status-bar"}
+          role="status"
+        >
+          <span>{isLoading ? "Loading..." : errorMessage || message || "Ready to manage workspaces."}</span>
+        </section>
 
-      <section className="workspace-layout">
+        <section className="workspace-layout">
         <section className="workspace-list-panel">
           <div className="panel-header">
             <div>
@@ -312,9 +322,9 @@ export function WorkspaceManagementPage() {
             <div className="empty-state">Select a workspace to see details.</div>
           )}
         </aside>
-      </section>
+        </section>
 
-      <section className="create-section">
+        <section className="create-section">
         <div>
           <h2>Create workspace</h2>
           <p>Create a mock workspace without waiting for auth, database, or container integrations.</p>
@@ -326,10 +336,11 @@ export function WorkspaceManagementPage() {
           onChange={setCreateForm}
           onSubmit={(event) => void createWorkspace(event)}
         />
-      </section>
+        </section>
 
-      {openedWorkspace ? <RuntimePreview workspace={openedWorkspace} onClose={() => setOpenedWorkspace(null)} /> : null}
-    </main>
+        {openedWorkspace ? <RuntimePreview workspace={openedWorkspace} onClose={() => setOpenedWorkspace(null)} /> : null}
+      </main>
+    </div>
   );
 }
 

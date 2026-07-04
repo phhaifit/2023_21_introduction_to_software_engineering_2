@@ -1,0 +1,104 @@
+.app-page-shell {
+  --app-sidebar-width: 260px;
+  --app-sidebar-peek: 14px;
+  --app-topbar-height: 72px;
+  background: #f4f6fb;
+  color: #0f172a;
+  min-height: 100vh;
+  position: relative;
+}
+
+.app-page-content {
+  margin-left: var(--app-sidebar-width);
+  min-width: 0;
+  padding-top: calc(var(--app-topbar-height) + 16px);
+  transition: margin-left 0.28s ease;
+}
+
+.app-sidebar {
+  background: linear-gradient(180deg, #111827 0%, #1e293b 100%);
+  border-right: 1px solid #1f2937;
+  color: #e5e7eb;
+  inset: var(--app-topbar-height) auto 0 0;
+  padding: 20px;
+  position: fixed;
+  transition: transform 0.28s ease;
+  width: var(--app-sidebar-width);
+  z-index: 40;
+}
+
+.app-sidebar-brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.app-sidebar-brand-mark {
+  align-items: center;
+  background: #38bdf8;
+  border-radius: 10px;
+  color: #082f49;
+  display: flex;
+  font-size: 0.85rem;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.app-sidebar-brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.app-sidebar-brand-subtitle {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin: 2px 0 0;
+}
+
+.app-sidebar-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.app-sidebar-link {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #cbd5e1;
+  display: block;
+  font-weight: 700;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+
+.app-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.app-sidebar-link.is-active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #e0f2fe;
+}
+
+.app-page-shell.is-sidebar-collapsed .app-sidebar {
+  transform: translateX(calc(-100% + var(--app-sidebar-peek)));
+}
+
+.app-page-shell.is-sidebar-collapsed .app-page-content {
+  margin-left: var(--app-sidebar-peek);
+}
+
+@media (max-width: 1050px) {
+  .app-sidebar {
+    border-right: 1px solid #1f2937;
+  }
+
+  .app-page-content {
+    margin-left: var(--app-sidebar-peek);
+  }
+}

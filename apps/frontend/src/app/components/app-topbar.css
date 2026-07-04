@@ -1,0 +1,150 @@
+.app-topbar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #dbe3ef;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  height: var(--app-topbar-height, 72px);
+  inset: 0 0 auto 0;
+  padding: 0 20px;
+  position: fixed;
+  z-index: 60;
+}
+
+.app-topbar-left,
+.app-topbar-right {
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+}
+
+.app-topbar-center {
+  min-width: 0;
+}
+
+.app-topbar-toggle {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #0f172a;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.app-topbar-toggle:hover {
+  background: #eef2ff;
+}
+
+.app-topbar-toggle-icon {
+  display: grid;
+  gap: 4px;
+  width: 16px;
+}
+
+.app-topbar-toggle-icon span {
+  background: #334155;
+  border-radius: 999px;
+  display: block;
+  height: 2px;
+  width: 100%;
+}
+
+.app-topbar-brand {
+  align-items: center;
+  color: #0f172a;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-topbar-brand-mark {
+  align-items: center;
+  background: #0f172a;
+  border-radius: 10px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.app-topbar-brand-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-topbar-right {
+  position: relative;
+}
+
+.app-topbar-profile-button {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #0f172a;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px 0 6px;
+}
+
+.app-topbar-profile-avatar {
+  align-items: center;
+  background: #0f172a;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.app-topbar-profile-menu {
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 4px;
+  inset: calc(100% + 10px) 0 auto auto;
+  min-width: 168px;
+  padding: 8px;
+  position: absolute;
+}
+
+.app-topbar-profile-menu button {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #1e293b;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.app-topbar-profile-menu button:hover {
+  background: #eef2ff;
+}
+
+@media (max-width: 900px) {
+  .app-topbar {
+    padding: 0 12px;
+  }
+
+  .app-topbar-brand-name,
+  .app-topbar-profile-label {
+    display: none;
+  }
+}

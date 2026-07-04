@@ -12,11 +12,64 @@ type AgentRow = {
   status: Agent["status"];
   directory_path: string | null;
   skill_file_path: string | null;
+  skill_file_content: string;
   created_by_user_id: string | null;
   updated_by_user_id: string | null;
   created_at: Date;
   updated_at: Date;
 };
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "agent";
+}
+
+function buildAgentDirectoryPath(workspaceId: string, agentName: string): string {
+  return `agents/${workspaceId}/${slugify(agentName)}`;
+}
+
+function buildSkillFileContent(input: {
+  name: string;
+  role: string;
+  model: string;
+  instructionContent: string;
+}): string {
+  return [
+    "# skill.md",
+    "",
+    "## Agent",
+    `- Name: ${input.name}`,
+    `- Role: ${input.role}`,
+    `- Model: ${input.model}`,
+    "",
+    "## Instructions",
+    input.instructionContent
+  ].join("\n");
+}
+
+function resolveSkillFileContent(
+  providedSkillFileContent: string | undefined,
+  fallbackInput: {
+    name: string;
+    role: string;
+    model: string;
+    instructionContent: string;
+  },
+  existingSkillFileContent?: string
+): string {
+  if (typeof providedSkillFileContent === "string" && providedSkillFileContent.trim()) {
+    return providedSkillFileContent.trim();
+  }
+
+  if (typeof existingSkillFileContent === "string" && existingSkillFileContent.trim()) {
+    return existingSkillFileContent;
+  }
+
+  return buildSkillFileContent(fallbackInput);
+}
 
 function mapRowToAgent(row: AgentRow): Agent {
   return {
@@ -25,6 +78,7 @@ function mapRowToAgent(row: AgentRow): Agent {
     role: row.role,
     model: row.model,
     instructionContent: row.instruction_content,
+    skillFileContent: row.skill_file_content,
     status: row.status,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
@@ -74,6 +128,7 @@ export async function createAgent(
   actorUserId: string
 ): Promise<Agent> {
   const now = new Date();
+  const directoryPath = buildAgentDirectoryPath(workspaceId, input.name);
   const row: AgentRow = {
     id: createUuid(),
     workspace_id: workspaceId,
@@ -82,8 +137,9 @@ export async function createAgent(
     model: input.model,
     instruction_content: input.instructionContent,
     status: input.status,
-    directory_path: null,
-    skill_file_path: null,
+    directory_path: directoryPath,
+    skill_file_path: `${directoryPath}/skill.md`,
+    skill_file_content: resolveSkillFileContent(input.skillFileContent, input),
     created_by_user_id: actorUserId,
     updated_by_user_id: actorUserId,
     created_at: now,
@@ -100,15 +156,41 @@ export async function updateAgent(
   input: UpdateAgentInput,
   actorUserId: string
 ): Promise<Agent | undefined> {
-  const current = await getAgentById(workspaceId, id);
+  const currentRow = await db<AgentRow>("agents")
+    .select("*")
+    .where({ id, workspace_id: workspaceId })
+    .first();
 
-  if (!current) {
+  if (!currentRow) {
     return undefined;
   }
 
+  const current = mapRowToAgent(currentRow);
+
+  const nextName = typeof input.name === "string" ? input.name.trim() : currentRow.name;
+  const nextRole = typeof input.role === "string" ? input.role.trim() : currentRow.role;
+  const nextModel = typeof input.model === "string" ? input.model.trim() : currentRow.model;
+  const nextInstructionContent =
+    typeof input.instructionContent === "string"
+      ? input.instructionContent.trim()
+      : currentRow.instruction_content;
+  const directoryPath = buildAgentDirectoryPath(workspaceId, nextName);
+
   const updates: Partial<AgentRow> = {
     updated_at: new Date(),
-    updated_by_user_id: actorUserId
+    updated_by_user_id: actorUserId,
+    directory_path: directoryPath,
+    skill_file_path: `${directoryPath}/skill.md`,
+    skill_file_content: resolveSkillFileContent(
+      input.skillFileContent,
+      {
+        name: nextName,
+        role: nextRole,
+        model: nextModel,
+        instructionContent: nextInstructionContent
+      },
+      currentRow.skill_file_content
+    )
   };
 
   if (typeof input.name === "string") {

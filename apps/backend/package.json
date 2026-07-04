@@ -21,8 +21,6 @@
     "db:demo-reset": "tsx src/db/demoReset.ts",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "start": "node dist/server.js"
   },

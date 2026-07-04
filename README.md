@@ -51,16 +51,10 @@ Start the database:
 docker compose up -d db
 ```
 
-Run all database migrations after PostgreSQL is healthy:
+Run backend database migrations after the database is up:
 
 ```sh
 npm run db:migrate --workspace @ai-agent-platform/backend
-```
-
-Run Authentication Prisma migrations:
-
-```sh
-npm run prisma:migrate:deploy --workspace @ai-agent-platform/backend
 ```
 
 Generate the Prisma client:
@@ -75,7 +69,7 @@ clearly identify it as test data, for example `ai_agent_platform_test`:
 
 ```sh
 export TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ai_agent_platform_test?schema=public"
-DATABASE_URL="$TEST_DATABASE_URL" npm run prisma:migrate:deploy --workspace @ai-agent-platform/backend
+DATABASE_URL="$TEST_DATABASE_URL" npm run db:migrate --workspace @ai-agent-platform/backend
 npm run test:auth:integration --workspace @ai-agent-platform/backend
 ```
 

@@ -17,17 +17,15 @@ function parseWorkspaceRole(rawRole: string | undefined): WorkspaceRole | null {
 
 export const resolveWorkspaceContext: RequestHandler = async (request, response, next) => {
   const workspaceId = request.header("x-workspace-id")?.trim();
-  const role = parseWorkspaceRole(request.header("x-workspace-role"));
+  const role = parseWorkspaceRole(request.header("x-workspace-role")) ?? "member";
 
   if (!workspaceId) {
     response.status(400).json({ error: "x-workspace-id is required." });
     return;
   }
 
-  if (!role) {
-    response.status(400).json({ error: "x-workspace-role is required and must be admin, member, or viewer." });
-    return;
-  }
+  // Permission checks are temporarily disabled for Agent Management.
+  // Missing or invalid x-workspace-role now falls back to "member".
 
   const workspace = await getWorkspaceById(workspaceId);
 
