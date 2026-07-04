@@ -7,7 +7,7 @@
   "scripts": {
     "predev": "npm run prisma:generate",
     "dev": "tsx watch src/server.ts",
-    "test": "npm run test:unit && npm run test:auth:integration",
+    "test": "vitest run && npm run test:unit && npm run test:auth:integration",
     "test:types": "tsc -p tests/tsconfig.json --noEmit",
     "test:unit": "npm run test:types && node --import tsx tests/password-encoder.service.test.ts && node --import tsx tests/token.service.test.ts && node --import tsx tests/auth.service.register.test.ts && node --import tsx tests/auth.service.login.test.ts && node --import tsx tests/auth.service.logout-token-validation.test.ts && node --import tsx tests/auth.controller.routes.test.ts && node --import tsx tests/auth.middleware.protected-endpoint.test.ts",
     "test:auth:integration": "npm run test:types && node --import tsx tests/auth.repositories.integration.test.ts && node --import tsx tests/auth.api.integration.test.ts",
@@ -17,6 +17,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:rollback": "tsx src/db/rollback.ts",
+    "db:demo-check": "tsx src/db/demoCheck.ts",
+    "db:demo-reset": "tsx src/db/demoReset.ts",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -38,8 +40,12 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.12",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^6.0.3",
+    "pg-mem": "^3.0.14",
     "prisma": "^7.8.0",
+    "supertest": "^7.1.4",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
   }
 }

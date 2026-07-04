@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
 import "../styles/authentication.css";
+import { mainApplicationNavigation } from "./mainApplication.navigation";
 
 export function MainApplicationPage() {
   const { logout, user } = useAuth();
@@ -70,6 +71,24 @@ export function MainApplicationPage() {
               <dd>{user?.id ?? "Unavailable"}</dd>
             </div>
           </dl>
+        </div>
+      </section>
+
+      <section className="main-navigation" aria-labelledby="main-navigation-title">
+        <div className="main-navigation__heading">
+          <p>SUBSCRIPTION &amp; PAYMENT</p>
+          <h2 id="main-navigation-title">Choose where to go</h2>
+        </div>
+        <div className="main-navigation__grid">
+          {mainApplicationNavigation.map((item) => (
+            <Link className="main-navigation-card" key={item.path} to={item.path}>
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+              <span className="main-navigation-card__action">
+                {item.action} <span aria-hidden="true">→</span>
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
     </main>
