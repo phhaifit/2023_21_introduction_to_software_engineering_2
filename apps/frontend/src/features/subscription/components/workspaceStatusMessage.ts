@@ -1,7 +1,7 @@
-import type { WorkspaceStatus } from "@ai-agent-platform/shared";
+import type { SubscriptionWorkspaceStatus } from "@ai-agent-platform/shared";
 
 export function getWorkspaceStatusMessage(
-  status: WorkspaceStatus | undefined
+  status: SubscriptionWorkspaceStatus | undefined
 ): string | undefined {
   if (status !== "PROVISIONING_FAILED") return undefined;
 

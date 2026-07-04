@@ -1,15 +1,17 @@
-import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
+import { landingRoutes } from "../features/landing/routes/landing.routes";
 import { subscriptionRoutes } from "../features/subscription/routes/subscription.routes";
+import { workflowRoutes } from "../features/workflow/routes/workflow.routes";
+import { workspaceRoutes } from "../features/workspace-management/routes/workspace.routes";
 
 const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Navigate to="/login" replace />
-  },
+  ...landingRoutes,
   ...authenticationRoutes,
-  ...subscriptionRoutes
+  ...subscriptionRoutes,
+  ...workspaceRoutes,
+  ...workflowRoutes
 ]);
 
 export function AppRouter() {

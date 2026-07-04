@@ -14,11 +14,11 @@ export type {
 } from "./authentication.js";
 export {
   SUBSCRIPTION_STATUSES,
+  SUBSCRIPTION_WORKSPACE_STATUSES,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
   WORKSPACE_OPERATION_ACTIONS,
-  WORKSPACE_OPERATION_STATUSES,
-  WORKSPACE_STATUSES
+  WORKSPACE_OPERATION_STATUSES
 } from "./subscription.js";
 export type {
   AdminSubscriptionListItem,
@@ -33,10 +33,37 @@ export type {
   Subscription,
   SubscriptionErrorCode,
   SubscriptionStatus,
+  SubscriptionWorkspaceStatus,
   TransactionStatus,
   TransactionType,
   WorkspaceOperationAction,
   WorkspaceOperationStatus,
-  WorkspaceProvisioningOperation,
-  WorkspaceStatus
+  WorkspaceProvisioningOperation
 } from "./subscription.js";
+
+export { WORKFLOW_STATUSES } from "./workflow.js";
+export type {
+  CreateWorkflowInput,
+  UpdateWorkflowInput,
+  Workflow,
+  WorkflowExecution,
+  WorkflowExecutionLogEntry,
+  WorkflowExecutionStatus,
+  WorkflowListFilters,
+  WorkflowStatus,
+  WorkflowStep,
+  WorkflowStepFailurePolicy
+} from "./workflow.js";
+
+export { WORKSPACE_RESOURCE_PROFILES, WORKSPACE_STATUSES } from "./workspace.js";
+export type {
+  CreateWorkspaceInput,
+  FailWorkspaceInput,
+  UpdateWorkspaceInput,
+  Workspace,
+  WorkspaceAction,
+  WorkspaceConfig,
+  WorkspaceResourceProfile,
+  WorkspaceStatus,
+  WorkspaceValidationIssue
+} from "./workspace.js";

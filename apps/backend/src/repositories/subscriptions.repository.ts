@@ -3,7 +3,7 @@ import type {
   Plan,
   Subscription,
   SubscriptionStatus,
-  WorkspaceStatus
+  SubscriptionWorkspaceStatus
 } from "@ai-agent-platform/shared";
 import type { Knex } from "knex";
 
@@ -17,7 +17,7 @@ type SubscriptionRow = {
   status: SubscriptionStatus;
   start_date: Date | string;
   end_date: Date | string;
-  workspace_status: WorkspaceStatus;
+  workspace_status: SubscriptionWorkspaceStatus;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -29,7 +29,7 @@ export type CreateSubscriptionRecord = {
   status: SubscriptionStatus;
   startDate: Date;
   endDate: Date;
-  workspaceStatus: WorkspaceStatus;
+  workspaceStatus: SubscriptionWorkspaceStatus;
 };
 
 export type UpdateSubscriptionRecord = Partial<

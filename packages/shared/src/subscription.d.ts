@@ -14,7 +14,7 @@ export declare const SUBSCRIPTION_STATUSES: {
   readonly EXPIRED: "EXPIRED";
   readonly CANCELLED: "CANCELLED";
 };
-export declare const WORKSPACE_STATUSES: {
+export declare const SUBSCRIPTION_WORKSPACE_STATUSES: {
   readonly NOT_PROVISIONED: "NOT_PROVISIONED";
   readonly PROVISIONING: "PROVISIONING";
   readonly ACTIVE: "ACTIVE";
@@ -33,7 +33,8 @@ export type PlanName = "Standard" | "Premium";
 export type TransactionType = (typeof TRANSACTION_TYPES)[keyof typeof TRANSACTION_TYPES];
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[keyof typeof TRANSACTION_STATUSES];
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[keyof typeof SUBSCRIPTION_STATUSES];
-export type WorkspaceStatus = (typeof WORKSPACE_STATUSES)[keyof typeof WORKSPACE_STATUSES];
+export type SubscriptionWorkspaceStatus =
+  (typeof SUBSCRIPTION_WORKSPACE_STATUSES)[keyof typeof SUBSCRIPTION_WORKSPACE_STATUSES];
 export type WorkspaceOperationAction =
   (typeof WORKSPACE_OPERATION_ACTIONS)[keyof typeof WORKSPACE_OPERATION_ACTIONS];
 export type WorkspaceOperationStatus =
@@ -57,7 +58,7 @@ export interface Subscription {
   status: SubscriptionStatus;
   startDate: string;
   endDate: string;
-  workspaceStatus: WorkspaceStatus;
+  workspaceStatus: SubscriptionWorkspaceStatus;
   createdAt: string;
   updatedAt: string;
 }

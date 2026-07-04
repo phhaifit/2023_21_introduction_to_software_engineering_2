@@ -1,9 +1,32 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 
 import "../styles/authentication.css";
 import { mainApplicationNavigation } from "./mainApplication.navigation";
 
 export function MainApplicationPage() {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+    } catch {
+      // AuthContext clears local auth state even when the backend logout request fails.
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  }
+
   return (
     <main className="main-application-shell">
       <header className="main-application-header">
@@ -12,8 +35,13 @@ export function MainApplicationPage() {
           <span>AI Agent Platform for Enterprise</span>
         </div>
 
-        <button className="logout-placeholder-button" type="button" disabled>
-          Logout
+        <button
+          className="main-logout-button"
+          disabled={isLoggingOut}
+          onClick={() => void handleLogout()}
+          type="button"
+        >
+          {isLoggingOut ? "Logging out..." : "Logout"}
         </button>
       </header>
 
@@ -22,11 +50,27 @@ export function MainApplicationPage() {
           ✓
         </div>
         <div>
-          <h1 id="main-title">Welcome back</h1>
-          <p>You are currently viewing the main application.</p>
+          <p className="main-application-eyebrow">Authenticated session</p>
+          <h1 id="main-title">Welcome back to the platform</h1>
+          <p>Your access has been verified by the authentication service.</p>
           <p className="main-application-muted">
-            Main application content will be available here.
+            This screen only shows public account information and logout controls.
           </p>
+
+          <dl className="main-user-details" aria-label="Current user">
+            <div>
+              <dt>Email</dt>
+              <dd>{user?.email ?? "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{user?.status ?? "Unavailable"}</dd>
+            </div>
+            <div>
+              <dt>User ID</dt>
+              <dd>{user?.id ?? "Unavailable"}</dd>
+            </div>
+          </dl>
         </div>
       </section>
 
