@@ -2,11 +2,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../generated/prisma/client.js";
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required to initialize Prisma.");
-}
+const localDatabaseUrl = "postgresql://postgres:postgres@localhost:5433/ai_agent_platform?schema=public";
+const databaseUrl = process.env.DATABASE_URL ?? localDatabaseUrl;
 
 const adapter = new PrismaPg(databaseUrl);
 

@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
+    "predev": "npm run prisma:generate",
     "dev": "tsx watch src/server.ts",
     "test": "npm run test:unit && npm run test:auth:integration",
     "test:types": "tsc -p tests/tsconfig.json --noEmit",
