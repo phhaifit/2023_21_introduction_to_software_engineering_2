@@ -1,9 +1,9 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Agent, UpdateAgentInput } from "@ai-agent-platform/shared";
 import { AppSidebar } from "../../../app/components/AppSidebar";
 import { AppTopBar } from "../../../app/components/AppTopBar";
-import { getAgent, updateAgent } from "../api/agentApi";
+import { deleteAgent, getAgent, updateAgent } from "../api/agentApi";
 
 import "../styles/agents.css";
 
@@ -45,6 +45,7 @@ function toEditForm(agent: Agent): AgentEditForm {
 }
 
 export function AgentDetailPage() {
+  const navigate = useNavigate();
   const { agentId = "" } = useParams();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -54,6 +55,10 @@ export function AgentDetailPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteConfirmClosing, setIsDeleteConfirmClosing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [uploadedSkillFileName, setUploadedSkillFileName] = useState("");
   const [uploadedSkillFileContent, setUploadedSkillFileContent] = useState("");
   const [skillFileInputKey, setSkillFileInputKey] = useState(0);
@@ -83,6 +88,44 @@ export function AgentDetailPage() {
 
     void loadAgent();
   }, [agentId]);
+
+  useEffect(() => {
+    if (!isDeleteConfirmOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsDeleteConfirmOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isDeleteConfirmOpen]);
+
+  useEffect(() => {
+    if (!isDeleteConfirmClosing) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsDeleteConfirmClosing(false);
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isDeleteConfirmClosing]);
+
+  const isDeleteConfirmRendered = isDeleteConfirmOpen || isDeleteConfirmClosing;
 
   function handleFieldChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     if (!editForm) {
@@ -125,6 +168,40 @@ export function AgentDetailPage() {
     setUploadedSkillFileContent("");
     setSkillEditMode("direct");
     setIsEditMode(true);
+  }
+
+  function handleOpenDeleteConfirm() {
+    if (!agent || isSaving) {
+      return;
+    }
+
+    setDeleteError("");
+    setIsDeleteConfirmClosing(false);
+    setIsDeleteConfirmOpen(true);
+  }
+
+  function handleCancelDelete() {
+    setDeleteError("");
+    setIsDeleteConfirmOpen(false);
+    setIsDeleteConfirmClosing(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!agent || isDeleting) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      await deleteAgent(agent.id);
+      navigate("/app/agents", { replace: true });
+    } catch (error) {
+      setDeleteError(toErrorMessage(error));
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   function handleCancelEdit() {
@@ -242,9 +319,11 @@ export function AgentDetailPage() {
             Back to agents
           </Link>
           {!isLoading && agent ? (
-            <button type="button" className="btn-primary" onClick={handleEnterEditMode} disabled={isEditMode || isSaving}>
-              Edit agent
-            </button>
+            <div className="agent-detail-top-actions">
+              <button type="button" className="btn-primary" onClick={handleEnterEditMode} disabled={isEditMode || isSaving || isDeleting}>
+                Edit agent
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -368,6 +447,14 @@ export function AgentDetailPage() {
               </div>
             </section>
 
+            {!isEditMode ? (
+              <div className="agent-detail-confirm-bar agent-animate-in">
+                <button type="button" className="btn-danger" onClick={handleOpenDeleteConfirm} disabled={isSaving || isDeleting}>
+                  Delete agent
+                </button>
+              </div>
+            ) : null}
+
             {saveError ? <p className="agents-list-state agents-list-state--error">{saveError}</p> : null}
 
             {isEditMode ? (
@@ -381,6 +468,46 @@ export function AgentDetailPage() {
               </div>
             ) : null}
           </form>
+        ) : null}
+
+        {isDeleteConfirmRendered ? (
+          <>
+            <button
+              type="button"
+              className={isDeleteConfirmClosing ? "agents-modal-backdrop agents-modal-backdrop--closing" : "agents-modal-backdrop"}
+              aria-label="Close delete confirmation dialog"
+              onClick={handleCancelDelete}
+            />
+
+            <section
+              className={
+                isDeleteConfirmClosing
+                  ? "agent-delete-confirm-panel agent-delete-confirm-panel--closing"
+                  : "agent-delete-confirm-panel"
+              }
+              aria-labelledby="delete-agent-title"
+              aria-modal="true"
+              role="dialog"
+            >
+              <div className="agents-panel-header">
+                <h2 id="delete-agent-title">Delete this agent?</h2>
+                <p>
+                  This will permanently remove {agent?.name ?? "the selected agent"} from the workspace.
+                </p>
+              </div>
+
+              {deleteError ? <p className="agents-list-state agents-list-state--error">{deleteError}</p> : null}
+
+              <div className="agent-delete-confirm-actions">
+                <button type="button" className="btn-secondary" onClick={handleCancelDelete} disabled={isDeleting}>
+                  Cancel
+                </button>
+                <button type="button" className="btn-danger" onClick={() => void handleConfirmDelete()} disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Confirm"}
+                </button>
+              </div>
+            </section>
+          </>
         ) : null}
       </main>
     </div>

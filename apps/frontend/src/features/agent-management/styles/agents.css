@@ -168,6 +168,10 @@
   animation: agent-fade-in 160ms ease-out;
 }
 
+.agents-modal-backdrop--closing {
+  animation: agent-fade-out 160ms ease-in forwards;
+}
+
 .agents-panel {
   background: #ffffff;
   border: 1px solid #dbe3ef;
@@ -371,6 +375,11 @@
   position: fixed;
   transform: translate(-50%, -50%);
   z-index: 80;
+  animation: agent-modal-in 180ms ease-out;
+}
+
+.agent-delete-confirm-panel--closing {
+  animation: agent-modal-out 160ms ease-in forwards;
 }
 
 .agent-delete-confirm-panel p {
@@ -896,6 +905,28 @@
   to {
     opacity: 1;
     transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes agent-modal-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+}
+
+@keyframes agent-fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }
 

@@ -1,4 +1,4 @@
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import { agentRoutes } from "../features/agent-management/routes/agent.routes";
 import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
