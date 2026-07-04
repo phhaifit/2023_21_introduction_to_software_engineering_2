@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:3000/api
+@email = duongthienbao0412@gmail.com
+@password = Abc1234@
+
+# ### register
+# # @name register
+# POST {{baseUrl}}/auth/register
+# Content-Type: application/json
+
+# {
+#   "email": "{{email}}",
+#   "password": "{{password}}",
+#   "confirmPassword": "{{password}}"
+# }
+
+### login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### create workspace
+# @name workspaceCreate
+POST {{baseUrl}}/workspaces
+Content-Type: application/json
+
+{
+  "name": "Agent Demo Workspace",
+  "description": "Workspace for seeding agents",
+  "templateId": "business-operations",
+  "resourceProfile": "Standard",
+  "region": "ap-southeast-1"
+}
+
+### set workspace running
+POST {{baseUrl}}/workspaces/{{workspaceCreate.response.body.$.data.id}}/complete
+
+### create agent 1
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Research-Agent",
+  "role": "Research Specialist",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Gather and summarize requirements from project docs.",
+  "status": "active"
+}
+
+### create agent 2
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Writer-Agent",
+  "role": "Documentation Writer",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Draft clear implementation notes from inputs.",
+  "status": "active"
+}
+
+### create agent 3
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Review-Agent",
+  "role": "Quality Reviewer",
+  "model": "gpt-4.1",
+  "instructionContent": "Review outputs for correctness and consistency.",
+  "status": "inactive"
+}
+
+### list agents
+GET {{baseUrl}}/agents
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member

@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AppSidebar } from "../../../app/components/AppSidebar";
+import { AppTopBar } from "../../../app/components/AppTopBar";
 
 import type { CreateWorkflowInput, Workflow, WorkflowExecution, WorkflowStatus, WorkflowStep } from "@ai-agent-platform/shared";
 
@@ -57,6 +59,7 @@ function statusLabel(status: WorkflowStatus) {
 }
 
 export function WorkflowDashboardPage() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [form, setForm] = useState<CreateWorkflowInput>(createDefaultForm());
@@ -195,8 +198,15 @@ export function WorkflowDashboardPage() {
   }
 
   return (
-    <main className="workflow-shell">
-      <header className="workflow-header">
+    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
+      <AppTopBar
+        collapsed={isSidebarCollapsed}
+        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
+      />
+      <AppSidebar collapsed={isSidebarCollapsed} />
+
+      <main className="app-page-content workflow-shell">
+        <header className="workflow-header">
         <div>
           <p className="workflow-eyebrow">Workflow Management</p>
           <h1>AI Agent Workflow Console</h1>
@@ -207,11 +217,11 @@ export function WorkflowDashboardPage() {
         </button>
       </header>
 
-      <section className="workflow-status-bar" role="status">
-        <span>{isLoading ? "Loading..." : message}</span>
-      </section>
+        <section className="workflow-status-bar" role="status">
+          <span>{isLoading ? "Loading..." : message}</span>
+        </section>
 
-      <section className="workflow-grid">
+        <section className="workflow-grid">
         <aside className="workflow-panel workflow-list-panel" aria-labelledby="workflow-list-title">
           <div className="workflow-panel-header">
             <div>
@@ -398,7 +408,8 @@ export function WorkflowDashboardPage() {
             <p className="workflow-muted">Create a workflow or select an item to view its detail.</p>
           )}
         </section>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
   );
 }

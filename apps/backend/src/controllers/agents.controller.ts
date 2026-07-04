@@ -60,11 +60,12 @@ export const createAgentController: RequestHandler = async (request, response, n
       return;
     }
 
-    const { name, role, model, instructionContent, status } = request.body as {
+    const { name, role, model, instructionContent, skillFileContent, status } = request.body as {
       name?: unknown;
       role?: unknown;
       model?: unknown;
       instructionContent?: unknown;
+      skillFileContent?: unknown;
       status?: unknown;
     };
 
@@ -93,6 +94,7 @@ export const createAgentController: RequestHandler = async (request, response, n
       role: role.trim(),
       model: model.trim(),
       instructionContent: instructionContent.trim(),
+      skillFileContent: typeof skillFileContent === "string" ? skillFileContent : undefined,
       status: isAgentStatus(status) ? status : "active"
     }, actorUserId);
 
@@ -112,11 +114,12 @@ export const updateAgentController: RequestHandler = async (request, response, n
       return;
     }
 
-    const { name, role, model, instructionContent, status } = request.body as {
+    const { name, role, model, instructionContent, skillFileContent, status } = request.body as {
       name?: unknown;
       role?: unknown;
       model?: unknown;
       instructionContent?: unknown;
+      skillFileContent?: unknown;
       status?: unknown;
     };
 
@@ -125,6 +128,7 @@ export const updateAgentController: RequestHandler = async (request, response, n
       role: typeof role === "string" ? role : undefined,
       model: typeof model === "string" ? model : undefined,
       instructionContent: typeof instructionContent === "string" ? instructionContent : undefined,
+      skillFileContent: typeof skillFileContent === "string" ? skillFileContent : undefined,
       status: isAgentStatus(status) ? status : undefined
     }, actorUserId);
 
