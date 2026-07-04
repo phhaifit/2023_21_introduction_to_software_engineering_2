@@ -35,6 +35,8 @@
 .auth-card__footer { color: #5b7089; text-align: center; }
 .auth-card__footer a { color: #1d4ed8; font-weight: 800; text-decoration: none; }
 
+.auth-form { display: grid; gap: 18px; }
+
 .auth-field {
   color: #20324a;
   display: grid;
