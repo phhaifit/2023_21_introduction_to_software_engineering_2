@@ -1,11 +1,15 @@
 import type {
+  Agent,
   CreateWorkspaceInput,
   FailWorkspaceInput,
   UpdateWorkspaceInput,
+  Workflow,
   Workspace,
   WorkspaceAction,
   WorkspaceValidationIssue
 } from "@ai-agent-platform/shared";
+
+import { getAccessToken } from "../../authentication/utils/token-storage";
 
 const API_BASE_URL = "/api";
 
@@ -27,13 +31,19 @@ export class WorkspaceApiValidationError extends Error {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const accessToken = getAccessToken();
+  const headers: HeadersInit = {
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(init?.headers ?? {})
+  };
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: init?.body
       ? {
           "Content-Type": "application/json",
-          ...(init.headers ?? {})
+          ...headers
         }
-      : init?.headers,
+      : headers,
     ...init
   });
 
@@ -91,4 +101,24 @@ export async function runWorkspaceAction(
     body: input ? JSON.stringify(input) : undefined
   });
   return response.data;
+}
+
+export function listWorkspaceAgents(workspaceId: string): Promise<Agent[]> {
+  return requestJson<Agent[]>("/agents", {
+    method: "GET",
+    headers: {
+      "X-Workspace-Id": workspaceId,
+      "X-Workspace-Role": "member"
+    }
+  });
+}
+
+export function listWorkspaceWorkflows(workspaceId: string): Promise<Workflow[]> {
+  return requestJson<Workflow[]>("/workflows", {
+    method: "GET",
+    headers: {
+      "X-Workspace-Id": workspaceId,
+      "X-Workspace-Role": "member"
+    }
+  });
 }

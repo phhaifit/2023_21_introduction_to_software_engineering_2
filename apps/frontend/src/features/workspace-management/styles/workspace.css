@@ -75,6 +75,13 @@
   overflow-wrap: anywhere;
 }
 
+.workspace-user-context {
+  color: #334155 !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 12px !important;
+}
+
 .summary-grid {
   display: grid;
   gap: 12px;
@@ -206,6 +213,10 @@
 .primary-button {
   background: #6366f1;
   color: #ffffff;
+}
+
+.workspace-action-link {
+  align-items: center;
 }
 
 .danger-button {

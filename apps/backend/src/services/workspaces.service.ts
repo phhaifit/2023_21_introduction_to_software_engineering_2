@@ -49,9 +49,12 @@ export async function getWorkspaceByIdService(id: string): Promise<Workspace> {
   return workspace;
 }
 
-export async function createWorkspaceService(input: Partial<CreateWorkspaceInput>): Promise<Workspace> {
+export async function createWorkspaceService(
+  input: Partial<CreateWorkspaceInput>,
+  ownerName = "Workspace Team"
+): Promise<Workspace> {
   await assertValidWorkspaceInput(input, "create");
-  return createWorkspace(input as CreateWorkspaceInput);
+  return createWorkspace(input as CreateWorkspaceInput, ownerName);
 }
 
 export async function updateWorkspaceService(

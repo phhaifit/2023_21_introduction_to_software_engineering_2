@@ -34,7 +34,9 @@ export const getWorkspaceController: RequestHandler = async (request, response, 
 
 export const createWorkspaceController: RequestHandler = async (request, response, next) => {
   try {
-    response.status(201).json({ data: await createWorkspaceService(request.body) });
+    response.status(201).json({
+      data: await createWorkspaceService(request.body, request.authContext?.email)
+    });
   } catch (error) {
     handleWorkspaceError(error, response, next);
   }

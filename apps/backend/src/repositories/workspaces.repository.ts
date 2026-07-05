@@ -85,13 +85,16 @@ export async function getWorkspaceByName(
   return row ? mapRowToWorkspace(row) : undefined;
 }
 
-export async function createWorkspace(input: CreateWorkspaceInput): Promise<Workspace> {
+export async function createWorkspace(
+  input: CreateWorkspaceInput,
+  ownerName = "Workspace Team"
+): Promise<Workspace> {
   const now = new Date();
   const row: WorkspaceRow = {
     id: createUuid(),
     name: input.name.trim(),
     description: input.description?.trim() ?? "",
-    owner_name: "Workspace Team",
+    owner_name: ownerName.trim() || "Workspace Team",
     status: "PROVISIONING",
     template_id: input.templateId,
     resource_profile: input.resourceProfile,

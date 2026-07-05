@@ -1,14 +1,31 @@
 import type { CreateWorkflowInput, UpdateWorkflowInput, Workflow, WorkflowExecution } from "@ai-agent-platform/shared";
 
+import { getAccessToken } from "../../authentication/utils/token-storage";
+import { getActiveWorkspaceId } from "../../workspace-management/api/workspaceContext";
+
 const API_BASE_URL = "/api";
+
+function buildRequestHeaders(init?: RequestInit): HeadersInit {
+  const accessToken = getAccessToken();
+  const activeWorkspaceId = getActiveWorkspaceId();
+
+  return {
+    ...(init?.body ? { "Content-Type": "application/json" } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(activeWorkspaceId
+      ? {
+          "X-Workspace-Id": activeWorkspaceId,
+          "X-Workspace-Role": "member"
+        }
+      : {}),
+    ...(init?.headers ?? {})
+  };
+}
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
-    },
-    ...init
+    ...init,
+    headers: buildRequestHeaders(init)
   });
 
   if (!response.ok) {

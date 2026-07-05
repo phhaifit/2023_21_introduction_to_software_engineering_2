@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   WORKSPACE_RESOURCE_PROFILES,
   WORKSPACE_STATUSES,
@@ -16,13 +17,24 @@ import {
   WorkspaceApiValidationError,
   createWorkspace as createWorkspaceRequest,
   deleteWorkspace as deleteWorkspaceRequest,
+  listWorkspaceAgents,
+  listWorkspaceWorkflows,
   listWorkspaces,
   runWorkspaceAction,
   updateWorkspace as updateWorkspaceRequest
 } from "../api/workspaceApi";
+import { saveActiveWorkspaceId } from "../api/workspaceContext";
+import { useAuth } from "../../authentication/context/AuthContext";
 import "../styles/workspace.css";
 
 type StatusFilter = "ALL" | WorkspaceStatus;
+
+interface WorkspaceCountSummary {
+  workspaceId: string;
+  count: number;
+  isLoading: boolean;
+  errorMessage?: string;
+}
 
 interface WorkspaceFormState {
   name: string;
@@ -49,6 +61,7 @@ const emptyFormState: WorkspaceFormState = {
 };
 
 export function WorkspaceManagementPage() {
+  const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -60,6 +73,8 @@ export function WorkspaceManagementPage() {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [agentSummary, setAgentSummary] = useState<WorkspaceCountSummary | null>(null);
+  const [workflowSummary, setWorkflowSummary] = useState<WorkspaceCountSummary | null>(null);
 
   async function loadWorkspaces() {
     setIsLoading(true);
@@ -88,6 +103,63 @@ export function WorkspaceManagementPage() {
 
   const selectedWorkspace =
     workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? filteredWorkspaces[0];
+
+  useEffect(() => {
+    if (selectedWorkspace?.status === "RUNNING") {
+      saveActiveWorkspaceId(selectedWorkspace.id);
+    }
+  }, [selectedWorkspace?.id, selectedWorkspace?.status]);
+
+  useEffect(() => {
+    if (!selectedWorkspace || selectedWorkspace.status !== "RUNNING") {
+      setAgentSummary(null);
+      setWorkflowSummary(null);
+      return;
+    }
+
+    let isActive = true;
+    const workspaceId = selectedWorkspace.id;
+    setAgentSummary({ workspaceId, count: 0, isLoading: true });
+    setWorkflowSummary({ workspaceId, count: 0, isLoading: true });
+
+    listWorkspaceAgents(workspaceId)
+      .then((agents) => {
+        if (isActive) {
+          setAgentSummary({ workspaceId, count: agents.length, isLoading: false });
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setAgentSummary({
+            workspaceId,
+            count: 0,
+            isLoading: false,
+            errorMessage: toErrorMessage(error)
+          });
+        }
+      });
+
+    listWorkspaceWorkflows(workspaceId)
+      .then((workflows) => {
+        if (isActive) {
+          setWorkflowSummary({ workspaceId, count: workflows.length, isLoading: false });
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setWorkflowSummary({
+            workspaceId,
+            count: 0,
+            isLoading: false,
+            errorMessage: toErrorMessage(error)
+          });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedWorkspace?.id, selectedWorkspace?.status]);
 
   const counts = {
     running: workspaces.filter((workspace) => workspace.status === "RUNNING").length,
@@ -197,9 +269,10 @@ export function WorkspaceManagementPage() {
           <p className="eyebrow">Workspace Management</p>
           <h1>Virtual workspace operations</h1>
           <p>
-            Standalone workspace management for create, update, delete, status filtering, lifecycle
-            transitions, and runtime preview.
+            Manage authenticated workspace records, lifecycle transitions, runtime preview, and
+            database-backed provisioning state.
           </p>
+          {user ? <p className="workspace-user-context">Signed in as {user.email}</p> : null}
         </div>
         <div className="summary-grid">
           <SummaryMetric label="Total" value={workspaces.length} />
@@ -302,6 +375,8 @@ export function WorkspaceManagementPage() {
               />
             ) : (
               <WorkspaceDetail
+                agentSummary={agentSummary}
+                workflowSummary={workflowSummary}
                 workspace={selectedWorkspace}
                 onAction={(action) => void runAction(action)}
                 onDelete={() => void deleteWorkspace()}
@@ -317,7 +392,7 @@ export function WorkspaceManagementPage() {
         <section className="create-section">
         <div>
           <h2>Create workspace</h2>
-          <p>Create a mock workspace without waiting for auth, database, or container integrations.</p>
+          <p>Create a workspace for the current authenticated user and start it in provisioning.</p>
         </div>
         <WorkspaceForm
           errors={formErrors}
@@ -417,11 +492,15 @@ function WorkspaceForm({
 }
 
 function WorkspaceDetail({
+  agentSummary,
+  workflowSummary,
   workspace,
   onAction,
   onDelete,
   onOpen
 }: {
+  agentSummary: WorkspaceCountSummary | null;
+  workflowSummary: WorkspaceCountSummary | null;
   workspace: Workspace;
   onAction: (action: WorkspaceAction) => void;
   onDelete: () => void;
@@ -442,6 +521,8 @@ function WorkspaceDetail({
         <DetailItem label="Region" value={workspace.config.region} />
         <DetailItem label="Container" value={workspace.containerId ?? "Not allocated"} />
         <DetailItem label="OpenClaw" value={workspace.openClawInstanceId ?? "Not started"} />
+        <DetailItem label="Agents" value={formatAgentSummary(workspace, agentSummary)} />
+        <DetailItem label="Workflows" value={formatWorkflowSummary(workspace, workflowSummary)} />
       </dl>
       {workspace.status === "FAILED" ? (
         <div className="failure-box">
@@ -465,6 +546,12 @@ function WorkspaceDetail({
             <button className="primary-button compact" type="button" onClick={onOpen}>
               Open workspace
             </button>
+            <Link className="primary-button compact workspace-action-link" to="/app/agents">
+              Manage agents
+            </Link>
+            <Link className="primary-button compact workspace-action-link" to="/app/workflows">
+              Manage workflows
+            </Link>
             <button className="ghost-button" type="button" onClick={() => onAction("stop")}>
               Stop
             </button>
@@ -560,6 +647,44 @@ function toStatusLabel(status: WorkspaceStatus): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatAgentSummary(workspace: Workspace, agentSummary: WorkspaceCountSummary | null): string {
+  const quota = getDefaultAgentQuota(workspace.config.resourceProfile);
+
+  if (workspace.status !== "RUNNING") {
+    return `Available when running - quota ${quota}`;
+  }
+
+  if (!agentSummary || agentSummary.workspaceId !== workspace.id || agentSummary.isLoading) {
+    return `Loading - quota ${quota}`;
+  }
+
+  if (agentSummary.errorMessage) {
+    return `Unavailable - quota ${quota}`;
+  }
+
+  return `${agentSummary.count}/${quota}`;
+}
+
+function formatWorkflowSummary(workspace: Workspace, workflowSummary: WorkspaceCountSummary | null): string {
+  if (workspace.status !== "RUNNING") {
+    return "Available when running";
+  }
+
+  if (!workflowSummary || workflowSummary.workspaceId !== workspace.id || workflowSummary.isLoading) {
+    return "Loading";
+  }
+
+  if (workflowSummary.errorMessage) {
+    return "Unavailable";
+  }
+
+  return `${workflowSummary.count}`;
+}
+
+function getDefaultAgentQuota(profile: WorkspaceResourceProfile): number {
+  return profile === "Starter" ? 5 : 20;
 }
 
 function toFormState(workspace: Workspace): WorkspaceFormState {
