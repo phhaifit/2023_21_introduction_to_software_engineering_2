@@ -24,8 +24,15 @@ export function SubscriptionStatusPage() {
 
   return (
     <SubscriptionShell>
-      <p className="eyebrow">MY SUBSCRIPTION</p>
-      <h1>Workspace access</h1>
+      <div className="subscription-heading">
+        <div>
+          <p className="eyebrow">MY SUBSCRIPTION</p>
+          <h1>Workspace access</h1>
+          <p className="subscription-heading__description">
+            Review subscription status, workspace access, and renewal options.
+          </p>
+        </div>
+      </div>
       {error && <p className="inline-error">{error}</p>}
       {missing && (
         <div className="state-card">

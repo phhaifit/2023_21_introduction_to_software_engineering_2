@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { AppSidebar } from "../../../app/components/AppSidebar";
-import { AppTopBar } from "../../../app/components/AppTopBar";
 import {
   WORKSPACE_RESOURCE_PROFILES,
   WORKSPACE_STATUSES,
@@ -51,7 +49,6 @@ const emptyFormState: WorkspaceFormState = {
 };
 
 export function WorkspaceManagementPage() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -194,14 +191,7 @@ export function WorkspaceManagementPage() {
   }
 
   return (
-    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
-      <AppTopBar
-        collapsed={isSidebarCollapsed}
-        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
-      />
-      <AppSidebar collapsed={isSidebarCollapsed} />
-
-      <main className="app-page-content workspace-page">
+    <div className="workspace-page">
         <section className="workspace-hero">
         <div>
           <p className="eyebrow">Workspace Management</p>
@@ -339,7 +329,6 @@ export function WorkspaceManagementPage() {
         </section>
 
         {openedWorkspace ? <RuntimePreview workspace={openedWorkspace} onClose={() => setOpenedWorkspace(null)} /> : null}
-      </main>
     </div>
   );
 }

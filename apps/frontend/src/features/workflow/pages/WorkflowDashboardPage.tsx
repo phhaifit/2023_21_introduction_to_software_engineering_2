@@ -1,6 +1,4 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { AppSidebar } from "../../../app/components/AppSidebar";
-import { AppTopBar } from "../../../app/components/AppTopBar";
 
 import type { CreateWorkflowInput, Workflow, WorkflowExecution, WorkflowStatus, WorkflowStep } from "@ai-agent-platform/shared";
 
@@ -59,7 +57,6 @@ function statusLabel(status: WorkflowStatus) {
 }
 
 export function WorkflowDashboardPage() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [form, setForm] = useState<CreateWorkflowInput>(createDefaultForm());
@@ -198,14 +195,7 @@ export function WorkflowDashboardPage() {
   }
 
   return (
-    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
-      <AppTopBar
-        collapsed={isSidebarCollapsed}
-        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
-      />
-      <AppSidebar collapsed={isSidebarCollapsed} />
-
-      <main className="app-page-content workflow-shell">
+    <div className="workflow-shell">
         <header className="workflow-header">
         <div>
           <p className="workflow-eyebrow">Workflow Management</p>
@@ -409,7 +399,6 @@ export function WorkflowDashboardPage() {
           )}
         </section>
         </section>
-      </main>
     </div>
   );
 }

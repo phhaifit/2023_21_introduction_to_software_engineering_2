@@ -4,9 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { AuthenticationLayout } from "../layouts/AuthenticationLayout";
 import { LoginPage } from "../pages/LoginPage";
-import { MainApplicationPage } from "../pages/MainApplicationPage";
 import { RegisterPage } from "../pages/RegisterPage";
-import { ProtectedRoute } from "./protected-route";
 
 const DEFAULT_PROTECTED_PATH = "/app";
 
@@ -47,14 +45,6 @@ export const authenticationRoutes: RouteObject[] = [
         element: <LoginRoute />
       }
     ]
-  },
-  {
-    path: "/app",
-    element: (
-      <ProtectedRoute>
-        <MainApplicationPage />
-      </ProtectedRoute>
-    )
   }
 ];
 

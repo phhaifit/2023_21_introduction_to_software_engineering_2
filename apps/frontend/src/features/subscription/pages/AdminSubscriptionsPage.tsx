@@ -36,8 +36,15 @@ export function AdminSubscriptionsPage() {
 
   return (
     <SubscriptionShell>
-      <p className="eyebrow">ADMIN</p>
-      <h1>Subscriptions</h1>
+      <div className="subscription-heading">
+        <div>
+          <p className="eyebrow">ADMIN</p>
+          <h1>Subscriptions</h1>
+          <p className="subscription-heading__description">
+            Monitor subscription records and workspace operations for the platform.
+          </p>
+        </div>
+      </div>
 
       {forbidden && (
         <p className="state-card warning">

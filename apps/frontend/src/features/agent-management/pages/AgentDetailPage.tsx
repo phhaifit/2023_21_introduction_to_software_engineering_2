@@ -1,8 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Agent, UpdateAgentInput } from "@ai-agent-platform/shared";
-import { AppSidebar } from "../../../app/components/AppSidebar";
-import { AppTopBar } from "../../../app/components/AppTopBar";
 import { deleteAgent, getAgent, updateAgent } from "../api/agentApi";
 
 import "../styles/agents.css";
@@ -47,7 +45,6 @@ function toEditForm(agent: Agent): AgentEditForm {
 export function AgentDetailPage() {
   const navigate = useNavigate();
   const { agentId = "" } = useParams();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [editForm, setEditForm] = useState<AgentEditForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -309,11 +306,7 @@ export function AgentDetailPage() {
   }
 
   return (
-    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
-      <AppTopBar collapsed={isSidebarCollapsed} onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)} />
-      <AppSidebar collapsed={isSidebarCollapsed} />
-
-      <main className="app-page-content agents-main agent-page-enter">
+    <div className="agents-main agent-page-enter">
         <div className={isEditMode ? "agent-detail-toolbar agent-detail-toolbar--editing agent-animate-in" : "agent-detail-toolbar agent-animate-in"}>
           <Link className="btn-secondary agent-inline-link" to="/app/agents">
             Back to agents
@@ -509,7 +502,6 @@ export function AgentDetailPage() {
             </section>
           </>
         ) : null}
-      </main>
     </div>
   );
 }

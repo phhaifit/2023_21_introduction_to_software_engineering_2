@@ -1,8 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import type { Agent } from "@ai-agent-platform/shared";
-import { AppSidebar } from "../../../app/components/AppSidebar";
-import { AppTopBar } from "../../../app/components/AppTopBar";
 import { createAgent, listAgents } from "../api/agentApi";
 
 import "../styles/agents.css";
@@ -37,7 +36,6 @@ function toErrorMessage(error: unknown): string {
 
 export function AgentManagementPage() {
   const navigate = useNavigate();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [agentsError, setAgentsError] = useState("");
@@ -206,19 +204,91 @@ export function AgentManagementPage() {
     }
   }
 
-  return (
-    <div className={isSidebarCollapsed ? "app-page-shell is-sidebar-collapsed" : "app-page-shell"}>
-      <AppTopBar
-        collapsed={isSidebarCollapsed}
-        onToggleSidebar={() => setIsSidebarCollapsed((current) => !current)}
-      />
-      <AppSidebar collapsed={isSidebarCollapsed} />
+  const createAgentDialog =
+    isCreatePanelOpen && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              className="agents-modal-backdrop"
+              aria-label="Close create agent dialog"
+              onClick={handleCreateCancel}
+            />
 
-      <div className="app-page-content agents-main agent-page-enter">
+            <section className="agents-create-panel" aria-labelledby="create-agent-title" aria-modal="true" role="dialog">
+              <div className="agents-panel-header">
+                <h2 id="create-agent-title">Create new agent</h2>
+                <p>Configure identity and behavior for this agent.</p>
+              </div>
+
+              <form className="agent-form" onSubmit={handleCreateAgentSubmit}>
+                <label>
+                  Agent name
+                  <input type="text" name="name" value={createForm.name} onChange={handleCreateFieldChange} placeholder="Example: Customer-Support-Agent" disabled={isCreatingAgent} required />
+                </label>
+
+                <label>
+                  Role
+                  <input type="text" name="role" value={createForm.role} onChange={handleCreateFieldChange} placeholder="Example: Support Specialist" disabled={isCreatingAgent} required />
+                </label>
+
+                <label>
+                  Model
+                  <select name="model" value={createForm.model} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="gpt-4.1">gpt-4.1</option>
+                    <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                  </select>
+                </label>
+
+                <label>
+                  Instruction
+                  <textarea name="instruction" rows={5} value={createForm.instructionContent} onChange={handleCreateFieldChange} placeholder="Define what the agent should do, constraints, and output format." disabled={isCreatingAgent} required />
+                </label>
+
+                <label>
+                  Status
+                  <select name="status" value={createForm.status} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </label>
+
+                <label>
+                  Optional skill.md
+                  <input key={createFileInputKey} type="file" accept=".md,text/markdown" onChange={(event) => void handleCreateSkillFileChange(event)} disabled={isCreatingAgent} />
+                </label>
+
+                <p className="agents-form-hint">
+                  {uploadedSkillFileName
+                    ? `Using uploaded file: ${uploadedSkillFileName}`
+                    : "If no skill.md is uploaded, the system will generate a default one from the form values."}
+                </p>
+
+                {createFormError ? <p className="agents-list-state agents-list-state--error">{createFormError}</p> : null}
+
+                <div className="agent-form-actions">
+                  <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={isCreatingAgent}>
+                    {isCreatingAgent ? "Creating..." : "Create agent"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </>,
+          document.body
+        )
+      : null;
+
+  return (
+    <div className="agents-main agent-page-enter">
         <header className="agents-topbar">
           <div>
             <p className="agents-eyebrow">Agent Management</p>
             <h1>View and manage your agents</h1>
+            <p className="agents-heading-description">
+              Create, inspect, and maintain the agents available to your workspace.
+            </p>
           </div>
 
           <div className="agents-create-disclosure">
@@ -231,77 +301,7 @@ export function AgentManagementPage() {
               + Create agent
             </button>
 
-            {isCreatePanelOpen ? (
-              <>
-                <button
-                  type="button"
-                  className="agents-modal-backdrop"
-                  aria-label="Close create agent dialog"
-                  onClick={handleCreateCancel}
-                />
-
-                <section className="agents-create-panel" aria-labelledby="create-agent-title" aria-modal="true" role="dialog">
-                  <div className="agents-panel-header">
-                    <h2 id="create-agent-title">Create new agent</h2>
-                    <p>Configure identity and behavior for this agent.</p>
-                  </div>
-
-                  <form className="agent-form" onSubmit={handleCreateAgentSubmit}>
-                    <label>
-                      Agent name
-                      <input type="text" name="name" value={createForm.name} onChange={handleCreateFieldChange} placeholder="Example: Customer-Support-Agent" disabled={isCreatingAgent} required />
-                    </label>
-
-                    <label>
-                      Role
-                      <input type="text" name="role" value={createForm.role} onChange={handleCreateFieldChange} placeholder="Example: Support Specialist" disabled={isCreatingAgent} required />
-                    </label>
-
-                    <label>
-                      Model
-                      <select name="model" value={createForm.model} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
-                        <option value="gpt-4o-mini">gpt-4o-mini</option>
-                        <option value="gpt-4.1">gpt-4.1</option>
-                        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                      </select>
-                    </label>
-
-                    <label>
-                      Instruction
-                      <textarea name="instruction" rows={5} value={createForm.instructionContent} onChange={handleCreateFieldChange} placeholder="Define what the agent should do, constraints, and output format." disabled={isCreatingAgent} required />
-                    </label>
-
-                    <label>
-                      Status
-                      <select name="status" value={createForm.status} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </label>
-
-                    <label>
-                      Optional skill.md
-                      <input key={createFileInputKey} type="file" accept=".md,text/markdown" onChange={(event) => void handleCreateSkillFileChange(event)} disabled={isCreatingAgent} />
-                    </label>
-
-                    <p className="agents-form-hint">
-                      {uploadedSkillFileName
-                        ? `Using uploaded file: ${uploadedSkillFileName}`
-                        : "If no skill.md is uploaded, the system will generate a default one from the form values."}
-                    </p>
-
-                    {createFormError ? <p className="agents-list-state agents-list-state--error">{createFormError}</p> : null}
-
-                    <div className="agent-form-actions">
-                      <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button>
-                      <button type="submit" className="btn-primary" disabled={isCreatingAgent}>
-                        {isCreatingAgent ? "Creating..." : "Create agent"}
-                      </button>
-                    </div>
-                  </form>
-                </section>
-              </>
-            ) : null}
+            {createAgentDialog}
           </div>
         </header>
 
@@ -348,7 +348,6 @@ export function AgentManagementPage() {
             )}
           </div>
         </section>
-      </div>
     </div>
   );
 }

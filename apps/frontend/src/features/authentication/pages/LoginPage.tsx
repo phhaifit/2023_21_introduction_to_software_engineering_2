@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
@@ -44,6 +44,13 @@ export function LoginPage({ onLogin, onLoginSuccess }: LoginPageProps) {
   const [formMessage, setFormMessage] = useState(registerSuccessMessage);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const messageVariant = formMessage === registerSuccessMessage && registerSuccessMessage ? "success" : "error";
+
+  useEffect(() => {
+    setFormValues(initialFormValues);
+    setFieldErrors({});
+    setFormMessage(registerSuccessMessage);
+    setIsSubmitting(false);
+  }, [location.key, registerSuccessMessage]);
 
   function updateField(field: keyof LoginFormValues) {
     return (event: ChangeEvent<HTMLInputElement>) => {
@@ -102,25 +109,25 @@ export function LoginPage({ onLogin, onLoginSuccess }: LoginPageProps) {
       subtitle="Enter your credentials to continue to the platform."
       title="Login to your account"
     >
-      <form className="auth-form" noValidate onSubmit={(event) => void submitLoginForm(event)}>
+      <form autoComplete="off" className="auth-form" noValidate onSubmit={(event) => void submitLoginForm(event)}>
         {formMessage ? <AuthMessage variant={messageVariant}>{formMessage}</AuthMessage> : null}
 
         <EmailInput
-          autoComplete="email"
+          autoComplete="off"
           disabled={isSubmitting}
           error={fieldErrors.email}
           label="Email Address"
-          name="email"
+          name="login-email"
           onChange={updateField("email")}
           required
           value={formValues.email}
         />
         <PasswordInput
-          autoComplete="current-password"
+          autoComplete="off"
           disabled={isSubmitting}
           error={fieldErrors.password}
           label="Password"
-          name="password"
+          name="login-password"
           onChange={updateField("password")}
           required
           value={formValues.password}
