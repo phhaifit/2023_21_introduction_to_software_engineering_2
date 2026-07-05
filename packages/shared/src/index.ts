@@ -12,3 +12,15 @@ export type {
   RegisterInput,
   UserStatus
 } from "./authentication.js";
+export type {
+  CollaborationContext,
+  ExecutionTarget,
+  ExecutionTargetStatus,
+  OrchestratedTask,
+  SubmitTaskInput,
+  TaskAuditLog,
+  TaskConsole,
+  TaskRoutingMode,
+  TaskStatus,
+  TaskTargetType
+} from "./task-orchestration.js";
