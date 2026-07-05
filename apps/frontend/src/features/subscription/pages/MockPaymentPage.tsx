@@ -9,6 +9,14 @@ import {
   getPaymentStatus
 } from "../services/subscription.api";
 
+function formatStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function MockPaymentPage() {
   const { transactionId = "" } = useParams();
   const [result, setResult] = useState<PaymentStatusResponse>();
@@ -47,7 +55,7 @@ export function MockPaymentPage() {
           customers never choose them.
         </p>
         <p>Transaction: <code>{transactionId}</code></p>
-        <p>Status: <strong>{result?.transaction.status ?? "Loading…"}</strong></p>
+        <p>Status: <strong>{result ? formatStatusLabel(result.transaction.status) : "Loading…"}</strong></p>
         {error && <p className="inline-error">{error}</p>}
         <div className="mock-actions">
           <button disabled={busy} onClick={() => void run("complete")} type="button">
@@ -56,16 +64,18 @@ export function MockPaymentPage() {
           <button disabled={busy} onClick={() => void run("provisioning-failure")} type="button">
             Simulate success + workspace failure
           </button>
-          <button disabled={busy} onClick={() => void run("fail")} type="button">
+          <button className="danger-button" disabled={busy} onClick={() => void run("fail")} type="button">
             Simulate payment failure
           </button>
           <button className="danger-button" disabled={busy} onClick={() => void run("cancel")} type="button">
             Simulate cancellation
           </button>
         </div>
-        <Link className="button button--secondary" to={`/app/subscription/payments/${transactionId}`}>
-          View payment result
-        </Link>
+        <div className="mock-result-action">
+          <Link className="button button--secondary" to={`/app/subscription/payments/${transactionId}`}>
+            View payment result
+          </Link>
+        </div>
       </div>
     </SubscriptionShell>
   );

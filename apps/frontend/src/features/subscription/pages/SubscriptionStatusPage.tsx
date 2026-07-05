@@ -6,6 +6,14 @@ import { SubscriptionShell } from "../components/SubscriptionShell";
 import { getWorkspaceStatusMessage } from "../components/workspaceStatusMessage";
 import { ApiError, getMySubscription } from "../services/subscription.api";
 
+function formatStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function SubscriptionStatusPage() {
   const [subscription, setSubscription] = useState<Subscription>();
   const [missing, setMissing] = useState(false);
@@ -42,7 +50,9 @@ export function SubscriptionStatusPage() {
       )}
       {subscription && (
         <div className="subscription-status-card">
-          <span className="status-pill">{subscription.status}</span>
+          <span className={subscription.status === "ACTIVE" ? "status-pill status-pill--active" : "status-pill"}>
+            {formatStatusLabel(subscription.status)}
+          </span>
           <h2>{subscription.planId}</h2>
           {workspaceStatusMessage && (
             <p className="state-card state-card--error">

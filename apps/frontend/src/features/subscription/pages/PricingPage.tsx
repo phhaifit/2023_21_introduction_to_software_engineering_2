@@ -5,6 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { SubscriptionShell } from "../components/SubscriptionShell";
 import { ApiError, getMySubscription, listPlans } from "../services/subscription.api";
 
+function formatStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function PricingPage() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -48,7 +56,10 @@ export function PricingPage() {
         </div>
         {subscription && (
           <p className="current-plan-summary">
-            Current: <strong>{subscription.planId}</strong> · {subscription.status}
+            Current: <strong>{subscription.planId}</strong> ·{" "}
+            <span className={subscription.status === "ACTIVE" ? "status-pill status-pill--active" : "status-pill"}>
+              {formatStatusLabel(subscription.status)}
+            </span>
           </p>
         )}
       </div>

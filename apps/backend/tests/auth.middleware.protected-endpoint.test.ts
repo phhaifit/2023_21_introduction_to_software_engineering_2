@@ -7,6 +7,7 @@ import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
 
 import { createAuthController, type AuthControllerService } from "../src/controllers/auth.controller.js";
 import { createAuthMiddleware, type AuthenticationService } from "../src/middleware/auth.middleware.js";
+import { createAuthenticateRequest } from "../src/middleware/authentication.js";
 import { createAuthRouter } from "../src/routes/auth.routes.js";
 import { AuthServiceError, type AuthServiceErrorCode } from "../src/services/auth.service.js";
 
@@ -61,7 +62,12 @@ async function callMiddleware(
   let status = 200;
   let body: unknown;
   let nextCount = 0;
-  const request = { headers } as Request;
+  const request = {
+    headers,
+    header(name: string) {
+      return headers[name.toLowerCase()];
+    }
+  } as Request;
   const response = {
     status(code: number) {
       status = code;
@@ -266,4 +272,97 @@ test("old tokens rejected by resolveCurrentUser do not reach the protected handl
   assert.equal(secondResult.status, 401);
   assert.equal(secondResult.nextCount, 0);
   assert.equal(secondResult.request.authenticatedUser, undefined);
+});
+
+test("legacy agent authentication middleware resolves valid Bearer tokens and attaches authContext", async () => {
+  const calls: string[] = [];
+  const middleware = createAuthenticateRequest({
+    async resolveCurrentUser(accessToken) {
+      calls.push(accessToken);
+      return PUBLIC_USER;
+    }
+  });
+  const result = await callMiddleware(middleware, {
+    authorization: `bEaReR ${RAW_ACCESS_TOKEN}`
+  });
+
+  assert.deepEqual(calls, [RAW_ACCESS_TOKEN]);
+  assert.deepEqual(result.request.authContext, {
+    userId: PUBLIC_USER.id,
+    email: PUBLIC_USER.email,
+    status: PUBLIC_USER.status
+  });
+  assert.equal(result.nextCount, 1);
+  assert.equal(result.status, 200);
+});
+
+test("legacy agent authentication middleware rejects malformed headers without resolving users", async () => {
+  const cases: Array<Record<string, string>> = [
+    {},
+    { authorization: "Token raw-access-token" },
+    { authorization: "Bearer" },
+    { authorization: "Bearer   " },
+    { authorization: "Bearer raw access token" }
+  ];
+
+  for (const headers of cases) {
+    const calls: string[] = [];
+    const result = await callMiddleware(
+      createAuthenticateRequest({
+        async resolveCurrentUser(accessToken) {
+          calls.push(accessToken);
+          return PUBLIC_USER;
+        }
+      }),
+      headers
+    );
+
+    assert.equal(result.status, 401);
+    assert.deepEqual(result.body, { error: "Unauthorized" });
+    assert.equal(result.nextCount, 0);
+    assert.equal(result.request.authContext, undefined);
+    assert.deepEqual(calls, []);
+  }
+});
+
+test("legacy agent authentication middleware maps token rejection and inactive accounts to string errors", async () => {
+  const cases = [
+    {
+      error: authError(AUTH_ERROR_CODES.UNAUTHORIZED, "Authentication required."),
+      status: 401,
+      body: { error: "Unauthorized" }
+    },
+    {
+      error: authError(AUTH_ERROR_CODES.ACCOUNT_DISABLED, "Account is disabled."),
+      status: 403,
+      body: { error: "Forbidden" }
+    },
+    {
+      error: authError(AUTH_ERROR_CODES.ACCOUNT_LOCKED, "Account is locked."),
+      status: 403,
+      body: { error: "Forbidden" }
+    },
+    {
+      error: new Error("database outage with token details"),
+      status: 401,
+      body: { error: "Unauthorized" }
+    }
+  ];
+
+  for (const authCase of cases) {
+    const result = await callMiddleware(
+      createAuthenticateRequest({
+        async resolveCurrentUser() {
+          throw authCase.error;
+        }
+      }),
+      { authorization: `Bearer ${RAW_ACCESS_TOKEN}` }
+    );
+
+    assert.equal(result.status, authCase.status);
+    assert.deepEqual(result.body, authCase.body);
+    assert.equal(result.nextCount, 0);
+    assert.equal(result.request.authContext, undefined);
+    assertSafeError(result.body);
+  }
 });

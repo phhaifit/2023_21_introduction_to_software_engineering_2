@@ -1,58 +1,74 @@
 import type { RequestHandler } from "express";
+import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
 
-import { findById } from "../repositories/user.repository.js";
-import { validateToken } from "../services/token.service.js";
+import type { PublicUserResponse } from "../dto/authentication/index.js";
+import { AuthServiceError, resolveCurrentUser } from "../services/auth.service.js";
+
+interface AgentAuthenticationService {
+  resolveCurrentUser(accessToken: string): Promise<PublicUserResponse>;
+}
+
+const defaultAuthenticationService: AgentAuthenticationService = {
+  resolveCurrentUser
+};
 
 function getBearerToken(authorizationHeader: string | undefined): string | null {
   if (!authorizationHeader) {
     return null;
   }
 
-  const [scheme, token] = authorizationHeader.split(" ");
+  const parts = authorizationHeader.trim().split(/\s+/);
 
-  if (scheme !== "Bearer" || !token) {
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [scheme, token] = parts;
+
+  if (scheme.toLowerCase() !== "bearer" || token.trim().length === 0) {
     return null;
   }
 
   return token;
 }
 
-export const authenticateRequest: RequestHandler = async (request, response, next) => {
-  try {
-    const accessToken = getBearerToken(request.header("authorization"));
+function isForbiddenAuthError(error: unknown): boolean {
+  return (
+    error instanceof AuthServiceError &&
+    (error.code === AUTH_ERROR_CODES.ACCOUNT_DISABLED || error.code === AUTH_ERROR_CODES.ACCOUNT_LOCKED)
+  );
+}
 
-    if (!accessToken) {
+export function createAuthenticateRequest(
+  service: AgentAuthenticationService = defaultAuthenticationService
+): RequestHandler {
+  return async (request, response, next) => {
+    try {
+      const accessToken = getBearerToken(request.header("authorization"));
+
+      if (!accessToken) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const user = await service.resolveCurrentUser(accessToken);
+
+      request.authContext = {
+        userId: user.id,
+        email: user.email,
+        status: user.status
+      };
+
+      next();
+    } catch (error) {
+      if (isForbiddenAuthError(error)) {
+        response.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
       response.status(401).json({ error: "Unauthorized" });
-      return;
     }
+  };
+}
 
-    const authToken = await validateToken(accessToken);
-
-    if (!authToken) {
-      response.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    const user = await findById(authToken.userId);
-
-    if (!user) {
-      response.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    if (user.status !== "active") {
-      response.status(403).json({ error: "Forbidden" });
-      return;
-    }
-
-    request.authContext = {
-      userId: user.id,
-      email: user.email,
-      status: user.status
-    };
-
-    next();
-  } catch {
-    response.status(401).json({ error: "Unauthorized" });
-  }
-};
+export const authenticateRequest: RequestHandler = createAuthenticateRequest();

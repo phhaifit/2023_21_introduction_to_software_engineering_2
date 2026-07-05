@@ -9,7 +9,6 @@ export type UserStatus = (typeof USER_STATUSES)[keyof typeof USER_STATUSES];
 export interface PublicUser {
   id: string;
   email: string;
-  displayName: string;
   status: UserStatus;
 }
 
@@ -27,6 +26,7 @@ export interface LoginInput {
 export interface AuthResponse {
   user: PublicUser;
   accessToken: string;
+  expiresAt: string;
 }
 
 export const AUTH_ERROR_CODES = {

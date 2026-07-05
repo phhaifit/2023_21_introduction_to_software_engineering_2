@@ -133,21 +133,26 @@
 .agents-create-button {
   align-items: center;
   background: #6366f1;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 10px;
   color: #ffffff;
   cursor: pointer;
   display: inline-flex;
-  font-size: 0.95rem;
+  font: inherit;
   font-weight: 800;
   justify-content: center;
-  min-height: 44px;
+  min-height: 42px;
   min-width: 150px;
-  padding: 0 18px;
-  transition: transform 120ms ease, box-shadow 160ms ease;
+  padding: 0 16px;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.agents-create-button:hover {
-  box-shadow: 0 12px 20px rgba(99, 102, 241, 0.24);
+.agents-create-button:hover:not(:disabled) {
+  background: #4f46e5;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.18);
   transform: translateY(-1px);
 }
 
@@ -847,19 +852,29 @@
 }
 
 .btn-danger {
-  background: #dc2626;
+  background: #fee2e2;
   border: 0;
   border-radius: 10px;
-  color: #ffffff;
+  color: #991b1b;
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
   min-height: 40px;
   padding: 0 14px;
-  transition: transform 100ms ease, filter 120ms ease;
+  transition:
+    background-color 160ms ease,
+    transform 100ms ease;
 }
 
-.btn-danger:hover {
-  filter: brightness(0.94);
+.btn-danger:hover:not(:disabled) {
+  background: #fecaca;
   transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
 }
 
 @keyframes agent-fade-in {

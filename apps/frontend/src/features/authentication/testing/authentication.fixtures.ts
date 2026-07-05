@@ -25,7 +25,6 @@ export function createAuthenticationTestFixtures(): AuthenticationTestFixtures {
       expectedPublicUser: {
         id: "auth-test-user-active",
         email: "active.user@example.com",
-        displayName: "Active Test User",
         status: USER_STATUSES.ACTIVE
       },
       expectedStatus: USER_STATUSES.ACTIVE
@@ -38,7 +37,6 @@ export function createAuthenticationTestFixtures(): AuthenticationTestFixtures {
       expectedPublicUser: {
         id: "auth-test-user-disabled",
         email: "disabled.user@example.com",
-        displayName: "Disabled Test User",
         status: USER_STATUSES.DISABLED
       },
       expectedStatus: USER_STATUSES.DISABLED
@@ -51,7 +49,6 @@ export function createAuthenticationTestFixtures(): AuthenticationTestFixtures {
       expectedPublicUser: {
         id: "auth-test-user-locked",
         email: "locked.user@example.com",
-        displayName: "Locked Test User",
         status: USER_STATUSES.LOCKED
       },
       expectedStatus: USER_STATUSES.LOCKED
