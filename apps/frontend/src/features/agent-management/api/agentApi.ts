@@ -1,6 +1,7 @@
 import type { Agent, CreateAgentInput, UpdateAgentInput, Workspace } from "@ai-agent-platform/shared";
 
 import { getAccessToken } from "../../authentication/utils/token-storage";
+import { getActiveWorkspaceId } from "../../workspace-management/api/workspaceContext";
 
 interface ApiDataResponse<T> {
   data: T;
@@ -58,6 +59,12 @@ async function resolveRunningWorkspaceId(accessToken: string): Promise<string> {
   });
 
   const runningWorkspaces = response.data.filter((item) => item.status === "RUNNING");
+  const activeWorkspaceId = getActiveWorkspaceId();
+  const activeWorkspace = runningWorkspaces.find((workspace) => workspace.id === activeWorkspaceId);
+
+  if (activeWorkspace) {
+    return activeWorkspace.id;
+  }
 
   for (const workspace of runningWorkspaces) {
     try {

@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { authenticateRequest } from "../middleware/authentication.js";
 import {
   completeWorkspaceProvisioningController,
   createWorkspaceController,
@@ -15,6 +16,8 @@ import {
 } from "../controllers/workspaces.controller.js";
 
 export const workspacesRouter = Router();
+
+workspacesRouter.use(authenticateRequest);
 
 workspacesRouter.get("/", listWorkspacesController);
 workspacesRouter.post("/", createWorkspaceController);

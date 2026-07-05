@@ -1,4 +1,4 @@
-import type { NextFunction, RequestHandler, Response } from "express";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 import type { CreateWorkflowInput, UpdateWorkflowInput, WorkflowStatus } from "@ai-agent-platform/shared";
 
@@ -31,9 +31,13 @@ function handleWorkflowError(error: unknown, response: Response, next: NextFunct
   next(error);
 }
 
-export const listWorkflowsController: RequestHandler = async (_request, response, next) => {
+function getWorkspaceIdFromRequest(request: Request): string | undefined {
+  return request.workspaceContext?.workspaceId ?? (request.header("x-workspace-id")?.trim() || undefined);
+}
+
+export const listWorkflowsController: RequestHandler = async (request, response, next) => {
   try {
-    response.json(await listWorkflowsService());
+    response.json(await listWorkflowsService(getWorkspaceIdFromRequest(request)));
   } catch (error) {
     next(error);
   }
@@ -41,7 +45,7 @@ export const listWorkflowsController: RequestHandler = async (_request, response
 
 export const getWorkflowController: RequestHandler = async (request, response, next) => {
   try {
-    const workflow = await getWorkflowByIdService(request.params.id);
+    const workflow = await getWorkflowByIdService(request.params.id, getWorkspaceIdFromRequest(request));
 
     if (!workflow) {
       response.status(404).json({ message: "Workflow not found" });
@@ -68,12 +72,15 @@ export const createWorkflowController: RequestHandler = async (request, response
       return;
     }
 
-    const workflow = await createWorkflowService({
-      name,
-      description: typeof description === "string" ? description : "",
-      status: isWorkflowStatus(status) ? status : "draft",
-      steps
-    });
+    const workflow = await createWorkflowService(
+      {
+        name,
+        description: typeof description === "string" ? description : "",
+        status: isWorkflowStatus(status) ? status : "draft",
+        steps
+      },
+      getWorkspaceIdFromRequest(request)
+    );
 
     response.status(201).json(workflow);
   } catch (error) {
@@ -84,12 +91,16 @@ export const createWorkflowController: RequestHandler = async (request, response
 export const updateWorkflowController: RequestHandler = async (request, response, next) => {
   try {
     const { name, description, status, steps } = request.body as Partial<UpdateWorkflowInput>;
-    const workflow = await updateWorkflowService(request.params.id, {
-      name: typeof name === "string" ? name : undefined,
-      description: typeof description === "string" ? description : undefined,
-      status: isWorkflowStatus(status) ? status : undefined,
-      steps: Array.isArray(steps) ? steps : undefined
-    });
+    const workflow = await updateWorkflowService(
+      request.params.id,
+      {
+        name: typeof name === "string" ? name : undefined,
+        description: typeof description === "string" ? description : undefined,
+        status: isWorkflowStatus(status) ? status : undefined,
+        steps: Array.isArray(steps) ? steps : undefined
+      },
+      getWorkspaceIdFromRequest(request)
+    );
 
     if (!workflow) {
       response.status(404).json({ message: "Workflow not found" });
@@ -104,7 +115,7 @@ export const updateWorkflowController: RequestHandler = async (request, response
 
 export const executeWorkflowController: RequestHandler = async (request, response, next) => {
   try {
-    response.status(201).json(await executeWorkflowService(request.params.id));
+    response.status(201).json(await executeWorkflowService(request.params.id, getWorkspaceIdFromRequest(request)));
   } catch (error) {
     handleWorkflowError(error, response, next);
   }
@@ -112,7 +123,7 @@ export const executeWorkflowController: RequestHandler = async (request, respons
 
 export const listWorkflowExecutionsController: RequestHandler = async (request, response, next) => {
   try {
-    response.json(await listWorkflowExecutionsService(request.params.id));
+    response.json(await listWorkflowExecutionsService(request.params.id, getWorkspaceIdFromRequest(request)));
   } catch (error) {
     handleWorkflowError(error, response, next);
   }

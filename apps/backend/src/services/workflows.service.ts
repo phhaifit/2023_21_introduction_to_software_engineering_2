@@ -77,18 +77,18 @@ function validateWorkflowInput(input: CreateWorkflowInput | UpdateWorkflowInput)
   }
 }
 
-export async function listWorkflowsService(): Promise<Workflow[]> {
-  return listWorkflowsRecord();
+export async function listWorkflowsService(workspaceId?: string): Promise<Workflow[]> {
+  return listWorkflowsRecord(workspaceId);
 }
 
-export async function getWorkflowByIdService(id: string): Promise<Workflow | undefined> {
-  return getWorkflowByIdRecord(id);
+export async function getWorkflowByIdService(id: string, workspaceId?: string): Promise<Workflow | undefined> {
+  return getWorkflowByIdRecord(id, workspaceId);
 }
 
-export async function createWorkflowService(input: CreateWorkflowInput): Promise<Workflow> {
+export async function createWorkflowService(input: CreateWorkflowInput, workspaceId?: string): Promise<Workflow> {
   validateWorkflowInput(input);
 
-  const duplicated = await getWorkflowByName(input.name);
+  const duplicated = await getWorkflowByName(input.name, workspaceId);
   if (duplicated) {
     throw new WorkflowValidationError("Workflow name already exists");
   }
@@ -98,11 +98,15 @@ export async function createWorkflowService(input: CreateWorkflowInput): Promise
     name: input.name.trim(),
     description: input.description.trim(),
     steps: normalizeSteps(input.steps)
-  });
+  }, workspaceId);
 }
 
-export async function updateWorkflowService(id: string, input: UpdateWorkflowInput): Promise<Workflow | undefined> {
-  const current = await getWorkflowByIdRecord(id);
+export async function updateWorkflowService(
+  id: string,
+  input: UpdateWorkflowInput,
+  workspaceId?: string
+): Promise<Workflow | undefined> {
+  const current = await getWorkflowByIdRecord(id, workspaceId);
   if (!current) {
     return undefined;
   }
@@ -114,7 +118,7 @@ export async function updateWorkflowService(id: string, input: UpdateWorkflowInp
   validateWorkflowInput(input);
 
   if (input.name && input.name.trim().toLowerCase() !== current.name.toLowerCase()) {
-    const duplicated = await getWorkflowByName(input.name);
+    const duplicated = await getWorkflowByName(input.name, workspaceId);
     if (duplicated) {
       throw new WorkflowValidationError("Workflow name already exists");
     }
@@ -125,11 +129,11 @@ export async function updateWorkflowService(id: string, input: UpdateWorkflowInp
     name: typeof input.name === "string" ? input.name.trim() : undefined,
     description: typeof input.description === "string" ? input.description.trim() : undefined,
     steps: input.steps ? normalizeSteps(input.steps) : undefined
-  });
+  }, workspaceId);
 }
 
-export async function executeWorkflowService(id: string): Promise<WorkflowExecution> {
-  const workflow = await getWorkflowByIdRecord(id);
+export async function executeWorkflowService(id: string, workspaceId?: string): Promise<WorkflowExecution> {
+  const workflow = await getWorkflowByIdRecord(id, workspaceId);
 
   if (!workflow) {
     throw new WorkflowNotFoundError();
@@ -155,11 +159,14 @@ export async function executeWorkflowService(id: string): Promise<WorkflowExecut
     };
   });
 
-  return createWorkflowExecution(workflow, "success", logs);
+  return createWorkflowExecution(workflow, "success", logs, workspaceId);
 }
 
-export async function listWorkflowExecutionsService(workflowId: string): Promise<WorkflowExecution[]> {
-  const workflow = await getWorkflowByIdRecord(workflowId);
+export async function listWorkflowExecutionsService(
+  workflowId: string,
+  workspaceId?: string
+): Promise<WorkflowExecution[]> {
+  const workflow = await getWorkflowByIdRecord(workflowId, workspaceId);
 
   if (!workflow) {
     throw new WorkflowNotFoundError();

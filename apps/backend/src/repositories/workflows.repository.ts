@@ -12,6 +12,10 @@ import { createUuid, db } from "../db/knex.js";
 
 const DEFAULT_WORKSPACE_ID = process.env.DEFAULT_WORKSPACE_ID ?? "default-workspace";
 
+function resolveWorkflowWorkspaceId(workspaceId?: string): string {
+  return workspaceId?.trim() || DEFAULT_WORKSPACE_ID;
+}
+
 type WorkflowRow = {
   id: string;
   workspace_id: string;
@@ -77,10 +81,10 @@ function mapRowToExecution(row: WorkflowExecutionRow): WorkflowExecution {
   };
 }
 
-export async function listWorkflows(): Promise<Workflow[]> {
+export async function listWorkflows(workspaceId?: string): Promise<Workflow[]> {
   const rows = await db<WorkflowRow>("workflows")
     .select("*")
-    .where({ workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ workspace_id: resolveWorkflowWorkspaceId(workspaceId) })
     .orderBy("updated_at", "desc");
 
   return rows.map(mapRowToWorkflow);
@@ -88,7 +92,7 @@ export async function listWorkflows(): Promise<Workflow[]> {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function getWorkflowById(id: string): Promise<Workflow | undefined> {
+export async function getWorkflowById(id: string, workspaceId?: string): Promise<Workflow | undefined> {
   // Fixed after test (D2-E2 tests)
   // Postgres throws "invalid input syntax for uuid" for non-UUID ids, which 
   // is not a WorkflowNotFoundError and was previously surfacing as a 500
@@ -99,27 +103,27 @@ export async function getWorkflowById(id: string): Promise<Workflow | undefined>
 
   const row = await db<WorkflowRow>("workflows")
     .select("*")
-    .where({ id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id, workspace_id: resolveWorkflowWorkspaceId(workspaceId) })
     .first();
 
   return row ? mapRowToWorkflow(row) : undefined;
 }
 
-export async function getWorkflowByName(name: string): Promise<Workflow | undefined> {
+export async function getWorkflowByName(name: string, workspaceId?: string): Promise<Workflow | undefined> {
   const row = await db<WorkflowRow>("workflows")
     .select("*")
-    .where({ workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ workspace_id: resolveWorkflowWorkspaceId(workspaceId) })
     .whereRaw("lower(name) = lower(?)", [name.trim()])
     .first();
 
   return row ? mapRowToWorkflow(row) : undefined;
 }
 
-export async function createWorkflow(input: CreateWorkflowInput): Promise<Workflow> {
+export async function createWorkflow(input: CreateWorkflowInput, workspaceId?: string): Promise<Workflow> {
   const now = new Date();
   const row: WorkflowRow = {
     id: createUuid(),
-    workspace_id: DEFAULT_WORKSPACE_ID,
+    workspace_id: resolveWorkflowWorkspaceId(workspaceId),
     name: input.name.trim(),
     description: input.description.trim(),
     status: input.status,
@@ -134,8 +138,13 @@ export async function createWorkflow(input: CreateWorkflowInput): Promise<Workfl
   return mapRowToWorkflow(row);
 }
 
-export async function updateWorkflow(id: string, input: UpdateWorkflowInput): Promise<Workflow | undefined> {
-  const current = await getWorkflowById(id);
+export async function updateWorkflow(
+  id: string,
+  input: UpdateWorkflowInput,
+  workspaceId?: string
+): Promise<Workflow | undefined> {
+  const resolvedWorkspaceId = resolveWorkflowWorkspaceId(workspaceId);
+  const current = await getWorkflowById(id, resolvedWorkspaceId);
 
   if (!current) {
     return undefined;
@@ -162,16 +171,17 @@ export async function updateWorkflow(id: string, input: UpdateWorkflowInput): Pr
   }
 
   await db<WorkflowRow>("workflows")
-    .where({ id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id, workspace_id: resolvedWorkspaceId })
     .update({ ...updates, steps: input.steps ? JSON.stringify(input.steps) : undefined });
 
-  return getWorkflowById(id);
+  return getWorkflowById(id, resolvedWorkspaceId);
 }
 
 export async function createWorkflowExecution(
   workflow: Workflow,
   status: WorkflowExecutionStatus,
-  logs: WorkflowExecutionLogEntry[]
+  logs: WorkflowExecutionLogEntry[],
+  workspaceId?: string
 ): Promise<WorkflowExecution> {
   const startedAt = new Date();
   const finishedAt = new Date(startedAt.getTime() + Math.max(250, workflow.steps.length * 125));
@@ -193,7 +203,7 @@ export async function createWorkflowExecution(
   });
 
   await db<WorkflowRow>("workflows")
-    .where({ id: workflow.id, workspace_id: DEFAULT_WORKSPACE_ID })
+    .where({ id: workflow.id, workspace_id: resolveWorkflowWorkspaceId(workspaceId) })
     .update({
       last_run_at: finishedAt,
       execution_count: workflow.executionCount + 1,
