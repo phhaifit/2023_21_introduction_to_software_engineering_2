@@ -13,10 +13,11 @@ const router = createBrowserRouter([
   ...agentRoutes,
   ...workspaceRoutes,
   ...workflowRoutes,
+  ...subscriptionRoutes,
   {
     path: "*",
-    element: <Navigate to="/app" replace />
-  }
+    element: <Navigate to="/app" replace />,
+  },
 ]);
 
 export function AppRouter() {
