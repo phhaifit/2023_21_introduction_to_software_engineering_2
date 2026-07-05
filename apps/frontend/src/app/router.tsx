@@ -1,7 +1,6 @@
-import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
-
-import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { landingRoutes } from "../features/landing/routes/landing.routes";
+import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
 import { protectedAppRoutes } from "../features/protected-app/routes/protected-app.routes";
 
 const router = createBrowserRouter([
@@ -10,8 +9,8 @@ const router = createBrowserRouter([
   ...protectedAppRoutes,
   {
     path: "*",
-    element: <Navigate to="/app" replace />
-  }
+    element: <Navigate to="/app" replace />,
+  },
 ]);
 
 export function AppRouter() {
