@@ -1,5 +1,6 @@
 .subscription-shell {
   color: #152033;
+  min-width: 0;
   width: 100%;
 }
 
@@ -40,10 +41,11 @@
 }
 
 .subscription-content {
-  width: 100%;
-  max-width: 1180px;
   margin: 0 auto;
+  max-width: 1180px;
+  min-width: 0;
   padding: 0 0 44px;
+  width: 100%;
 }
 
 .subscription-embedded-tools {
@@ -55,15 +57,16 @@
 }
 
 .subscription-heading {
+  align-items: end;
   background: linear-gradient(135deg, #eef2ff 0%, #ffffff 58%, #ecfeff 100%);
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   box-shadow: 0 12px 28px rgb(15 23 42 / 5%);
   display: flex;
-  align-items: end;
-  justify-content: space-between;
   gap: 24px;
+  justify-content: space-between;
   margin-bottom: 22px;
+  min-width: 0;
   padding: 28px;
 }
 
@@ -97,11 +100,12 @@
 .mock-payment-card,
 .result-card,
 .subscription-status-card {
-  padding: 24px;
+  background: white;
   border: 1px solid #dce3ee;
   border-radius: 18px;
-  background: white;
   box-shadow: 0 16px 40px rgb(31 47 77 / 8%);
+  min-width: 0;
+  padding: 24px;
 }
 
 .state-card--error,
@@ -116,6 +120,7 @@
 }
 
 .inline-error {
+  overflow-wrap: anywhere;
   padding: 12px 14px;
   border-radius: 10px;
 }
@@ -132,11 +137,14 @@
 }
 
 .plan-card {
-  position: relative;
-  padding: 32px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid #dce3ee;
   border-radius: 22px;
   background: white;
+  min-width: 0;
+  padding: 32px;
+  position: relative;
 }
 
 .plan-card--featured {
@@ -164,16 +172,19 @@
 }
 
 .plan-card ul {
-  min-height: 130px;
-  padding-left: 20px;
   color: #4f5c70;
   line-height: 1.9;
+  margin-bottom: 22px;
+  min-height: 130px;
+  padding-left: 20px;
 }
 
 .status-pill {
-  display: inline-block;
+  align-items: center;
+  display: inline-flex;
+  min-height: 28px;
   margin-bottom: 14px;
-  padding: 5px 10px;
+  padding: 0 10px;
   border-radius: 999px;
   background: #e7efff;
   color: #2f56bd;
@@ -181,35 +192,71 @@
   font-weight: 800;
 }
 
+.status-pill--active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.current-plan-summary .status-pill,
+.order-summary .status-pill,
+.table-wrap .status-pill {
+  margin-bottom: 0;
+}
+
 .subscription-shell button,
 .subscription-shell .button {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 11px 18px;
+  background: #6366f1;
   border: 0;
   border-radius: 10px;
-  background: #315fe8;
   color: white;
+  cursor: pointer;
+  display: inline-flex;
   font: inherit;
   font-weight: 600;
+  justify-content: center;
   letter-spacing: 0;
+  min-height: 42px;
+  padding: 0 16px;
   text-decoration: none;
-  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.subscription-shell button:not(:disabled):hover,
+.subscription-shell .button:hover {
+  background: #4f46e5;
+  box-shadow: 0 12px 24px rgb(99 102 241 / 18%);
+  transform: translateY(-1px);
 }
 
 .subscription-shell button:disabled {
-  cursor: wait;
-  opacity: 0.6;
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
-.button--secondary {
+.subscription-shell .button--secondary {
   background: #e7ecf4;
   color: #25334a;
 }
 
-.danger-button {
-  background: #b83232;
+.subscription-shell .button--secondary:hover {
+  background: #dbe3ef;
+  box-shadow: none;
+}
+
+.subscription-shell .danger-button {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.subscription-shell .danger-button:not(:disabled):hover {
+  background: #fecaca;
+  box-shadow: none;
 }
 
 .checkout-card,
@@ -220,14 +267,22 @@
   margin: 0 auto;
 }
 
+.checkout-card h1,
+.mock-payment-card h1,
+.result-card h1,
+.subscription-status-card h2 {
+  margin-bottom: 18px;
+}
+
 .order-summary {
   margin: 24px 0;
 }
 
 .order-summary div {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 20px;
+  justify-content: space-between;
   padding: 14px 0;
   border-bottom: 1px solid #e5eaf1;
 }
@@ -239,15 +294,43 @@
 .order-summary dd {
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
   text-align: right;
 }
 
 .button-row,
 .mock-actions {
-  display: flex;
-  flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
+}
+
+.button-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.button-row > button,
+.button-row > .button {
+  min-width: 150px;
+}
+
+.mock-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mock-actions button {
+  min-width: 0;
+  width: 100%;
+}
+
+.mock-result-action {
+  border-top: 1px solid #e5eaf1;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 18px;
+  padding-top: 18px;
 }
 
 .payment-note {
@@ -255,10 +338,11 @@
 }
 
 .table-wrap {
-  overflow-x: auto;
   border: 1px solid #dce3ee;
   border-radius: 16px;
   background: white;
+  margin-top: 18px;
+  overflow-x: auto;
 }
 
 .subscription-shell table {
@@ -268,8 +352,8 @@
 
 .subscription-shell th,
 .subscription-shell td {
-  padding: 14px 18px;
   border-bottom: 1px solid #e5eaf1;
+  padding: 14px 18px;
   text-align: left;
   white-space: nowrap;
 }
@@ -319,6 +403,10 @@
   border-color: #f0d8a8;
 }
 
+.subscription-shell section > h2 {
+  margin: 28px 0 12px;
+}
+
 .operation-failure-code {
   display: inline-block;
   margin-top: 2px;
@@ -338,6 +426,10 @@
   }
 
   .plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mock-actions {
     grid-template-columns: 1fr;
   }
 }

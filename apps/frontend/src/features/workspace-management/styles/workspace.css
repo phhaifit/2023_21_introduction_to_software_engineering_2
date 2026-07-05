@@ -79,6 +79,7 @@
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .summary-metric {
@@ -93,6 +94,10 @@
   display: block;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.2;
+  min-height: 0.9rem;
+  overflow: visible;
+  white-space: nowrap;
 }
 
 .summary-metric strong {
@@ -295,12 +300,14 @@
 }
 
 .status-badge {
+  align-items: center;
   border-radius: 999px;
   display: inline-flex;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   justify-content: center;
-  padding: 5px 10px;
+  min-height: 28px;
+  padding: 0 10px;
   text-transform: capitalize;
   white-space: nowrap;
   width: fit-content;
@@ -505,6 +512,16 @@
 
   .workspace-detail-panel {
     position: static;
+  }
+}
+
+@container (max-width: 1100px) {
+  .workspace-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(112px, 1fr));
   }
 }
 

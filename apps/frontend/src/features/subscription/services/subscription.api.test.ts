@@ -112,4 +112,36 @@ describe("subscription API client", () => {
       new ApiError("PLAN_NOT_FOUND", "Plan not found", 404)
     );
   });
+
+  it("normalizes string API errors safely", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        })
+      )
+    );
+
+    await expect(listPlans()).rejects.toEqual(
+      new ApiError("REQUEST_FAILED", "Unauthorized", 401)
+    );
+  });
+
+  it("falls back safely when API error objects omit a message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: { code: "INTERNAL_SERVER_ERROR" } }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        })
+      )
+    );
+
+    await expect(listPlans()).rejects.toEqual(
+      new ApiError("INTERNAL_SERVER_ERROR", "Internal Server Error", 500)
+    );
+  });
 });

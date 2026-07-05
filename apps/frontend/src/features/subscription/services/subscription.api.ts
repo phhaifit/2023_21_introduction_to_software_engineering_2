@@ -31,17 +31,52 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
   });
   const body = (await response.json()) as T & {
-    error?: { code?: string; message?: string };
+    error?: unknown;
+    message?: unknown;
   };
 
   if (!response.ok) {
+    const normalizedError = normalizeApiError(body);
+
     throw new ApiError(
-      body.error?.code ?? "REQUEST_FAILED",
-      body.error?.message ?? "Request failed",
+      normalizedError.code,
+      normalizedError.message,
       response.status
     );
   }
   return body;
+}
+
+function normalizeApiError(body: { error?: unknown; message?: unknown }): { code: string; message: string } {
+  if (isErrorObject(body.error)) {
+    return {
+      code: typeof body.error.code === "string" ? body.error.code : "REQUEST_FAILED",
+      message: typeof body.error.message === "string" ? body.error.message : "Internal Server Error"
+    };
+  }
+
+  if (typeof body.error === "string") {
+    return {
+      code: "REQUEST_FAILED",
+      message: body.error
+    };
+  }
+
+  if (typeof body.message === "string") {
+    return {
+      code: "REQUEST_FAILED",
+      message: body.message
+    };
+  }
+
+  return {
+    code: "REQUEST_FAILED",
+    message: "Internal Server Error"
+  };
+}
+
+function isErrorObject(value: unknown): value is { code?: unknown; message?: unknown } {
+  return typeof value === "object" && value !== null;
 }
 
 export function listPlans(): Promise<Plan[]> {

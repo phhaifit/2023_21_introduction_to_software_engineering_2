@@ -551,7 +551,15 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 }
 
 function StatusBadge({ status }: { status: WorkspaceStatus }) {
-  return <span className={`status-badge status-${status.toLowerCase()}`}>{status}</span>;
+  return <span className={`status-badge status-${status.toLowerCase()}`}>{toStatusLabel(status)}</span>;
+}
+
+function toStatusLabel(status: WorkspaceStatus): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function toFormState(workspace: Workspace): WorkspaceFormState {

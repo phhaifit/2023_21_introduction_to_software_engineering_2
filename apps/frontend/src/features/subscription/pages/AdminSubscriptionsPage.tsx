@@ -11,6 +11,14 @@ import {
   listAdminWorkspaceOperations
 } from "../services/subscription.api";
 
+function formatStatusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<AdminSubscriptionListResponse>();
   const [operations, setOperations] = useState<AdminWorkspaceOperationListResponse>();
@@ -76,7 +84,11 @@ export function AdminSubscriptionsPage() {
                     <tr key={item.id}>
                       <td>{item.userId}</td>
                       <td>{item.plan.name}</td>
-                      <td>{item.status}</td>
+                      <td>
+                        <span className={item.status === "ACTIVE" ? "status-pill status-pill--active" : "status-pill"}>
+                          {formatStatusLabel(item.status)}
+                        </span>
+                      </td>
                       <td>{new Date(item.endDate).toLocaleDateString()}</td>
                       <td>{item.workspaceStatus}</td>
                     </tr>
@@ -117,7 +129,7 @@ export function AdminSubscriptionsPage() {
                       <td>{operation.planId}</td>
                       <td>{operation.workspaceId}</td>
                       <td>
-                        {operation.status}
+                        {formatStatusLabel(operation.status)}
                         {operation.status === "FAILED" && operation.failureCode && (
                           <span className="operation-failure-code">
                             {operation.failureCode}
