@@ -5,7 +5,8 @@
     "rootDir": ".."
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "../src/types/**/*.d.ts"
   ],
   "exclude": [
     "../dist",
