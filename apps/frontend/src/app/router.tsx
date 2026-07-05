@@ -1,4 +1,4 @@
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import { agentRoutes } from "../features/agent-management/routes/agent.routes";
 import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
@@ -13,10 +13,11 @@ const router = createBrowserRouter([
   ...agentRoutes,
   ...workspaceRoutes,
   ...workflowRoutes,
+  ...subscriptionRoutes,
   {
     path: "*",
-    element: <Navigate to="/app" replace />
-  }
+    element: <Navigate to="/app" replace />,
+  },
 ]);
 
 export function AppRouter() {
