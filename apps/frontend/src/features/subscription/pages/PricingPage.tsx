@@ -42,6 +42,9 @@ export function PricingPage() {
         <div>
           <p className="eyebrow">SUBSCRIPTION</p>
           <h1>Choose the workspace that fits your team</h1>
+          <p className="subscription-heading__description">
+            Compare workspace capacity, support level, and agent limits for your team.
+          </p>
         </div>
         {subscription && (
           <p className="current-plan-summary">

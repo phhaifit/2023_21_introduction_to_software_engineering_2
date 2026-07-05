@@ -1,18 +1,13 @@
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 
-import { agentRoutes } from "../features/agent-management/routes/agent.routes";
 import { authenticationRoutes } from "../features/authentication/routes/authentication.routes";
 import { landingRoutes } from "../features/landing/routes/landing.routes";
-import { subscriptionRoutes } from "../features/subscription/routes/subscription.routes";
-import { workflowRoutes } from "../features/workflow/routes/workflow.routes";
-import { workspaceRoutes } from "../features/workspace-management/routes/workspace.routes";
+import { protectedAppRoutes } from "../features/protected-app/routes/protected-app.routes";
 
 const router = createBrowserRouter([
   ...landingRoutes,
   ...authenticationRoutes,
-  ...agentRoutes,
-  ...workspaceRoutes,
-  ...workflowRoutes,
+  ...protectedAppRoutes,
   {
     path: "*",
     element: <Navigate to="/app" replace />
