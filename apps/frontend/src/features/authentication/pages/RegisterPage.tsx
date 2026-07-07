@@ -5,7 +5,9 @@ import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
 
 import { AuthButton, AuthCard, AuthMessage, EmailInput, PasswordInput } from "../components";
 import { AUTHENTICATION_ERROR_MESSAGES } from "../constants/authentication.constants";
+import { AuthApiError } from "../services/auth.api";
 import {
+  validateRegisterField,
   validateRegisterForm,
   type RegisterFormPayload,
   type RegisterFormValues,
@@ -31,6 +33,11 @@ const initialFormValues: RegisterFormValues = {
 const REGISTER_FAILED_MESSAGE = "We could not create your account. Please try again.";
 const REGISTER_UNAVAILABLE_MESSAGE = "Registration is not available yet. Please try again later.";
 const REGISTER_SUCCESS_MESSAGE = "Account created successfully. Please log in.";
+const DUPLICATE_EMAIL_MESSAGES = [
+  "email already exists",
+  "account with this email already exists",
+  "email is already registered"
+];
 
 export function RegisterPage({ onRegister }: RegisterPageProps) {
   const navigate = useNavigate();
@@ -50,6 +57,17 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
         [field]: undefined
       }));
       setFormMessage("");
+    };
+  }
+
+  function validateFieldOnBlur(field: keyof RegisterFormValues) {
+    return () => {
+      const error = validateRegisterField(field, formValues);
+
+      setFieldErrors((currentErrors) => ({
+        ...currentErrors,
+        [field]: error
+      }));
     };
   }
 
@@ -85,7 +103,16 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
         }
       });
     } catch (error) {
-      setFormMessage(toSafeRegisterErrorMessage(error));
+      if (isDuplicateEmailError(error)) {
+        setFieldErrors((currentErrors) => ({
+          ...currentErrors,
+          email: AUTHENTICATION_ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+        }));
+        setFormMessage("");
+      } else {
+        setFormMessage(toSafeRegisterErrorMessage(error));
+      }
+
       setIsSubmitting(false);
     }
   }
@@ -114,6 +141,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
           error={fieldErrors.email}
           label="Email Address"
           name="email"
+          onBlur={validateFieldOnBlur("email")}
           onChange={updateField("email")}
           required
           value={formValues.email}
@@ -124,6 +152,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
           error={fieldErrors.password}
           label="Password"
           name="password"
+          onBlur={validateFieldOnBlur("password")}
           onChange={updateField("password")}
           required
           value={formValues.password}
@@ -134,6 +163,7 @@ export function RegisterPage({ onRegister }: RegisterPageProps) {
           error={fieldErrors.confirmPassword}
           label="Confirm Password"
           name="confirmPassword"
+          onBlur={validateFieldOnBlur("confirmPassword")}
           onChange={updateField("confirmPassword")}
           required
           value={formValues.confirmPassword}
@@ -158,4 +188,22 @@ function toSafeRegisterErrorMessage(error: unknown): string {
   }
 
   return REGISTER_FAILED_MESSAGE;
+}
+
+function isDuplicateEmailError(error: unknown): boolean {
+  if (!(error instanceof AuthApiError)) {
+    return false;
+  }
+
+  if (error.code === AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS) {
+    return true;
+  }
+
+  return error.field === "email" && hasDuplicateEmailMessage(error.message);
+}
+
+function hasDuplicateEmailMessage(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+
+  return DUPLICATE_EMAIL_MESSAGES.some((duplicateMessage) => normalizedMessage.includes(duplicateMessage));
 }
