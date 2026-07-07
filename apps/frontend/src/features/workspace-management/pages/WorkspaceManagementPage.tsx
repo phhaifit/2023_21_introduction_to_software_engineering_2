@@ -530,19 +530,19 @@ function WorkspaceDetail({
           <p>{workspace.failureReason ?? "Unknown failure."}</p>
         </div>
       ) : null}
-      <div className="action-bar">
+      <div className="action-bar workspace-detail-actions">
         {workspace.status === "PROVISIONING" ? (
-          <>
+          <div className="workspace-detail-actions__secondary">
             <button className="primary-button compact" type="button" onClick={() => onAction("complete")}>
               Complete
             </button>
             <button className="danger-button compact" type="button" onClick={() => onAction("fail")}>
               Simulate fail
             </button>
-          </>
+          </div>
         ) : null}
         {workspace.status === "RUNNING" ? (
-          <>
+          <div className="workspace-detail-actions__primary">
             <button className="primary-button compact" type="button" onClick={onOpen}>
               Open workspace
             </button>
@@ -552,27 +552,37 @@ function WorkspaceDetail({
             <Link className="primary-button compact workspace-action-link" to="/app/workflows">
               Manage workflows
             </Link>
+          </div>
+        ) : null}
+        {workspace.status === "RUNNING" ? (
+          <div className="workspace-detail-actions__secondary">
             <button className="ghost-button" type="button" onClick={() => onAction("stop")}>
               Stop
             </button>
             <button className="ghost-button" type="button" onClick={() => onAction("restart")}>
               Restart
             </button>
-          </>
+          </div>
         ) : null}
         {workspace.status === "STOPPED" ? (
-          <button className="primary-button compact" type="button" onClick={() => onAction("start")}>
-            Start
-          </button>
+          <div className="workspace-detail-actions__secondary">
+            <button className="primary-button compact" type="button" onClick={() => onAction("start")}>
+              Start
+            </button>
+          </div>
         ) : null}
         {workspace.status === "FAILED" ? (
-          <button className="primary-button compact" type="button" onClick={() => onAction("retry")}>
-            Retry
-          </button>
+          <div className="workspace-detail-actions__secondary">
+            <button className="primary-button compact" type="button" onClick={() => onAction("retry")}>
+              Retry
+            </button>
+          </div>
         ) : null}
-        <button className="danger-button compact" type="button" onClick={onDelete}>
-          Delete
-        </button>
+        <div className="workspace-detail-actions__danger">
+          <button className="danger-button compact" type="button" onClick={onDelete}>
+            Delete
+          </button>
+        </div>
       </div>
     </>
   );
