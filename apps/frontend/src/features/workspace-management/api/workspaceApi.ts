@@ -32,19 +32,19 @@ export class WorkspaceApiValidationError extends Error {
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const accessToken = getAccessToken();
-  const headers: HeadersInit = {
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    ...(init?.headers ?? {})
-  };
+  const requestHeaders = new Headers(init?.headers);
+
+  if (init?.body && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+
+  if (accessToken) {
+    requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: init?.body
-      ? {
-          "Content-Type": "application/json",
-          ...headers
-        }
-      : headers,
-    ...init
+    ...init,
+    headers: requestHeaders
   });
 
   if (response.status === 204) {

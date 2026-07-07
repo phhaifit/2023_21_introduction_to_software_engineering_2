@@ -233,6 +233,48 @@
   gap: 8px;
 }
 
+.workspace-detail-actions {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.workspace-detail-actions__primary,
+.workspace-detail-actions__secondary,
+.workspace-detail-actions__danger {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspace-detail-actions__primary,
+.workspace-detail-actions__secondary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workspace-detail-actions__primary > :first-child {
+  grid-column: 1 / -1;
+}
+
+.workspace-detail-actions__secondary > :only-child {
+  grid-column: 1 / -1;
+}
+
+.workspace-detail-actions .compact,
+.workspace-detail-actions .ghost-button,
+.workspace-detail-actions .danger-button,
+.workspace-detail-actions .workspace-action-link {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  width: 100%;
+}
+
 .filter-row {
   margin-bottom: 14px;
   min-width: 0;
@@ -431,6 +473,17 @@
 .workspace-detail-panel .create-form {
   grid-template-columns: 1fr;
   margin-top: 16px;
+}
+
+.create-section .form-actions {
+  align-self: end;
+  justify-content: stretch;
+  min-width: 0;
+  width: 100%;
+}
+
+.create-section .form-actions .primary-button {
+  width: 100%;
 }
 
 .create-form label {
