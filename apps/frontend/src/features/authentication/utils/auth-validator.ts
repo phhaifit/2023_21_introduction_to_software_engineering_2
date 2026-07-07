@@ -64,23 +64,10 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterValida
   const normalizedEmail = normalizeEmail(values.email);
   const errors: RegisterValidationErrors = {};
 
-  if (!normalizedEmail) {
-    errors.email = REGISTER_VALIDATION_MESSAGES.emailRequired;
-  } else if (!EMAIL_PATTERN.test(normalizedEmail)) {
-    errors.email = REGISTER_VALIDATION_MESSAGES.emailInvalid;
-  }
-
-  if (!values.password) {
-    errors.password = REGISTER_VALIDATION_MESSAGES.passwordRequired;
-  } else if (!isStrongPassword(values.password)) {
-    errors.password = REGISTER_VALIDATION_MESSAGES.passwordWeak;
-  }
-
-  if (!values.confirmPassword) {
-    errors.confirmPassword = REGISTER_VALIDATION_MESSAGES.confirmPasswordRequired;
-  } else if (values.confirmPassword !== values.password) {
-    errors.confirmPassword = REGISTER_VALIDATION_MESSAGES.confirmPasswordMismatch;
-  }
+  errors.email = validateRegisterField("email", values);
+  errors.password = validateRegisterField("password", values);
+  errors.confirmPassword = validateRegisterField("confirmPassword", values);
+  removeEmptyErrors(errors);
 
   const isValid = Object.keys(errors).length === 0;
 
@@ -96,19 +83,51 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterValida
   };
 }
 
+export function validateRegisterField(field: keyof RegisterFormValues, values: RegisterFormValues): string | undefined {
+  if (field === "email") {
+    const normalizedEmail = normalizeEmail(values.email);
+
+    if (!normalizedEmail) {
+      return REGISTER_VALIDATION_MESSAGES.emailRequired;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      return REGISTER_VALIDATION_MESSAGES.emailInvalid;
+    }
+
+    return undefined;
+  }
+
+  if (field === "password") {
+    if (!values.password) {
+      return REGISTER_VALIDATION_MESSAGES.passwordRequired;
+    }
+
+    if (!isStrongPassword(values.password)) {
+      return REGISTER_VALIDATION_MESSAGES.passwordWeak;
+    }
+
+    return undefined;
+  }
+
+  if (!values.confirmPassword) {
+    return REGISTER_VALIDATION_MESSAGES.confirmPasswordRequired;
+  }
+
+  if (values.confirmPassword !== values.password) {
+    return REGISTER_VALIDATION_MESSAGES.confirmPasswordMismatch;
+  }
+
+  return undefined;
+}
+
 export function validateLoginForm(values: LoginFormValues): LoginValidationResult {
   const normalizedEmail = normalizeEmail(values.email);
   const errors: LoginValidationErrors = {};
 
-  if (!normalizedEmail) {
-    errors.email = LOGIN_VALIDATION_MESSAGES.emailRequired;
-  } else if (!EMAIL_PATTERN.test(normalizedEmail)) {
-    errors.email = LOGIN_VALIDATION_MESSAGES.emailInvalid;
-  }
-
-  if (!values.password) {
-    errors.password = LOGIN_VALIDATION_MESSAGES.passwordRequired;
-  }
+  errors.email = validateLoginField("email", values);
+  errors.password = validateLoginField("password", values);
+  removeEmptyErrors(errors);
 
   const isValid = Object.keys(errors).length === 0;
 
@@ -122,6 +141,28 @@ export function validateLoginForm(values: LoginFormValues): LoginValidationResul
         }
       : undefined
   };
+}
+
+export function validateLoginField(field: keyof LoginFormValues, values: LoginFormValues): string | undefined {
+  if (field === "email") {
+    const normalizedEmail = normalizeEmail(values.email);
+
+    if (!normalizedEmail) {
+      return LOGIN_VALIDATION_MESSAGES.emailRequired;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      return LOGIN_VALIDATION_MESSAGES.emailInvalid;
+    }
+
+    return undefined;
+  }
+
+  if (!values.password) {
+    return LOGIN_VALIDATION_MESSAGES.passwordRequired;
+  }
+
+  return undefined;
 }
 
 function normalizeEmail(email: string): string {
@@ -135,4 +176,12 @@ function isStrongPassword(password: string): boolean {
     /[a-z]/.test(password) &&
     /\d/.test(password)
   );
+}
+
+function removeEmptyErrors(errors: RegisterValidationErrors | LoginValidationErrors): void {
+  for (const field of Object.keys(errors) as Array<keyof typeof errors>) {
+    if (!errors[field]) {
+      delete errors[field];
+    }
+  }
 }

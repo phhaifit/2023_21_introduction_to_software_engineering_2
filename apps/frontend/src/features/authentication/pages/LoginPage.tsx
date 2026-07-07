@@ -6,6 +6,7 @@ import { AUTH_ERROR_CODES } from "@ai-agent-platform/shared";
 import { AuthButton, AuthCard, AuthMessage, EmailInput, PasswordInput } from "../components";
 import { AUTHENTICATION_ERROR_MESSAGES } from "../constants/authentication.constants";
 import {
+  validateLoginField,
   validateLoginForm,
   type LoginFormPayload,
   type LoginFormValues,
@@ -66,6 +67,17 @@ export function LoginPage({ onLogin, onLoginSuccess }: LoginPageProps) {
     };
   }
 
+  function validateFieldOnBlur(field: keyof LoginFormValues) {
+    return () => {
+      const error = validateLoginField(field, formValues);
+
+      setFieldErrors((currentErrors) => ({
+        ...currentErrors,
+        [field]: error
+      }));
+    };
+  }
+
   async function submitLoginForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -118,6 +130,7 @@ export function LoginPage({ onLogin, onLoginSuccess }: LoginPageProps) {
           error={fieldErrors.email}
           label="Email Address"
           name="login-email"
+          onBlur={validateFieldOnBlur("email")}
           onChange={updateField("email")}
           required
           value={formValues.email}
@@ -128,6 +141,7 @@ export function LoginPage({ onLogin, onLoginSuccess }: LoginPageProps) {
           error={fieldErrors.password}
           label="Password"
           name="login-password"
+          onBlur={validateFieldOnBlur("password")}
           onChange={updateField("password")}
           required
           value={formValues.password}
