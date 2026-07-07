@@ -46,6 +46,7 @@ type TaskRow = {
   collaboration_context: CollaborationContext | null;
   created_at: Date;
   updated_at: Date;
+  messages?: any;
 };
 
 type AuditRow = {
@@ -88,7 +89,8 @@ function mapTask(row: TaskRow, auditLog: TaskAuditLog[]): OrchestratedTask {
     collaborationContext: row.collaboration_context,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
-    auditLog
+    auditLog,
+    messages: typeof row.messages === "string" ? JSON.parse(row.messages) : row.messages
   };
 }
 
@@ -232,7 +234,8 @@ export async function createCompletedTask(input: Omit<OrchestratedTask, "auditLo
       error: input.error,
       collaboration_context: input.collaborationContext,
       created_at: new Date(input.createdAt),
-      updated_at: new Date(input.updatedAt)
+      updated_at: new Date(input.updatedAt),
+      messages: input.messages ? JSON.stringify(input.messages) : null
     });
 
     await trx<AuditRow>("task_audit_logs").insert(
@@ -253,6 +256,38 @@ export async function createCompletedTask(input: Omit<OrchestratedTask, "auditLo
   }
 
   return task;
+}
+
+export async function updateTask(input: OrchestratedTask) {
+  await db.transaction(async (trx) => {
+    await trx<TaskRow>("orchestrated_tasks")
+      .where({ id: input.id })
+      .update({
+        status: input.status,
+        result: input.result,
+        result_summary: input.resultSummary,
+        error: input.error,
+        collaboration_context: input.collaborationContext,
+        updated_at: new Date(input.updatedAt),
+        messages: input.messages ? JSON.stringify(input.messages) : null
+      });
+  });
+
+  return getTaskById(input.id, input.workspaceId);
+}
+
+export async function addAuditLogs(taskId: string, logs: Array<Omit<TaskAuditLog, "id" | "taskId">>) {
+  if (!logs.length) return;
+
+  await db<AuditRow>("task_audit_logs").insert(
+    logs.map((audit) => ({
+      id: createUuid(),
+      task_id: taskId,
+      title: audit.title,
+      detail: audit.detail,
+      created_at: new Date(audit.createdAt)
+    }))
+  );
 }
 
 export { DEFAULT_WORKSPACE_ID };

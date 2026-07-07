@@ -26,6 +26,16 @@ export interface CollaborationContext {
   handoffNotes: string[];
 }
 
+export interface TaskMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  summary?: string | null;
+  error?: string | null;
+  createdAt: string;
+  calendarActions?: any[] | null;
+}
+
 export interface OrchestratedTask {
   id: string;
   workspaceId: string;
@@ -43,6 +53,7 @@ export interface OrchestratedTask {
   createdAt: string;
   updatedAt: string;
   auditLog: TaskAuditLog[];
+  messages?: TaskMessage[] | null;
 }
 
 export interface TaskConsole {
@@ -63,4 +74,7 @@ export interface SubmitTaskInput {
   prompt: string;
   routingMode: TaskRoutingMode;
   targetId?: string;
+  taskId?: string;
+  currentStatistics?: string;
+  currentEvents?: string;
 }

@@ -41,12 +41,15 @@ export const getTaskController: RequestHandler = async (request, response, next)
 
 export const submitTaskController: RequestHandler = async (request, response, next) => {
   try {
-    const { workspaceId, requesterId, prompt, routingMode, targetId } = request.body as {
+    const { workspaceId, requesterId, prompt, routingMode, targetId, taskId, currentStatistics, currentEvents } = request.body as {
       workspaceId?: unknown;
       requesterId?: unknown;
       prompt?: unknown;
       routingMode?: unknown;
       targetId?: unknown;
+      taskId?: unknown;
+      currentStatistics?: unknown;
+      currentEvents?: unknown;
     };
 
     if (typeof prompt !== "string" || !prompt.trim()) {
@@ -64,7 +67,10 @@ export const submitTaskController: RequestHandler = async (request, response, ne
       requesterId: typeof requesterId === "string" ? requesterId : undefined,
       prompt,
       routingMode,
-      targetId: typeof targetId === "string" ? targetId : undefined
+      targetId: typeof targetId === "string" ? targetId : undefined,
+      taskId: typeof taskId === "string" ? taskId : undefined,
+      currentStatistics: typeof currentStatistics === "string" ? currentStatistics : undefined,
+      currentEvents: typeof currentEvents === "string" ? currentEvents : undefined
     });
 
     response.status(201).json(task);
