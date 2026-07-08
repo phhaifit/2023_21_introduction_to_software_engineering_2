@@ -281,6 +281,42 @@
   margin: 0;
 }
 
+.agents-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agents-summary-pill {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.agents-summary-pill--total {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.agents-summary-pill--active {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.agents-summary-pill--inactive {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
 .agents-list {
   display: grid;
   gap: 10px;
@@ -311,11 +347,17 @@
   min-width: 0;
 }
 
-.agents-list-toolbar-secondary {
+.agents-list-toolbar-middle {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.agents-list-toolbar-bottom {
   align-items: end;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1.8fr) repeat(2, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
 }
 
 .agents-list-toolbar-item {
@@ -1349,7 +1391,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .agents-list-toolbar-secondary {
+  .agents-list-toolbar-bottom {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1398,7 +1440,8 @@
   }
 
   .agents-list-toolbar-primary,
-  .agents-list-toolbar-secondary {
+  .agents-list-toolbar-middle,
+  .agents-list-toolbar-bottom {
     grid-template-columns: 1fr;
   }
 

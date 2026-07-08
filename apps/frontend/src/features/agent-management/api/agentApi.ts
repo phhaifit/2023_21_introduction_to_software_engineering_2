@@ -33,11 +33,17 @@ export interface ListAgentsOptions {
   sortOrder?: "asc" | "desc";
   model?: string;
   search?: string;
+  status?: Agent["status"];
 }
 
 export interface ListAgentsResponse {
   items: Agent[];
   total: number;
+  activeCount: number;
+  inactiveCount: number;
+  workspaceTotalCount: number;
+  workspaceActiveCount: number;
+  workspaceInactiveCount: number;
   page: number;
   pageSize: number;
 }
@@ -200,6 +206,10 @@ export async function listAgents(
     query.set("search", options.search.trim());
   }
 
+  if (options.status) {
+    query.set("status", options.status);
+  }
+
   const queryString = query.toString();
   const path = queryString ? `/agents?${queryString}` : "/agents";
 
@@ -218,6 +228,20 @@ export async function listAgents(
   return {
     items: Array.isArray(body) ? body : [],
     total: toPositiveInteger(response.headers.get("x-total-count"), 0),
+    activeCount: toPositiveInteger(response.headers.get("x-active-count"), 0),
+    inactiveCount: toPositiveInteger(response.headers.get("x-inactive-count"), 0),
+    workspaceTotalCount: toPositiveInteger(
+      response.headers.get("x-workspace-total-count"),
+      toPositiveInteger(response.headers.get("x-total-count"), 0)
+    ),
+    workspaceActiveCount: toPositiveInteger(
+      response.headers.get("x-workspace-active-count"),
+      toPositiveInteger(response.headers.get("x-active-count"), 0)
+    ),
+    workspaceInactiveCount: toPositiveInteger(
+      response.headers.get("x-workspace-inactive-count"),
+      toPositiveInteger(response.headers.get("x-inactive-count"), 0)
+    ),
     page: toPositiveInteger(response.headers.get("x-page"), options.page ?? 1),
     pageSize: toPositiveInteger(response.headers.get("x-page-size"), options.pageSize ?? 20)
   };

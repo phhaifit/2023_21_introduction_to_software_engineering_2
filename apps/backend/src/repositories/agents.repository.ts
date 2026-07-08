@@ -28,11 +28,20 @@ export type ListAgentsQuery = {
   sortOrder: "asc" | "desc";
   model?: string;
   search?: string;
+  status?: Agent["status"];
 };
 
 export type ListAgentsResult = {
   items: Agent[];
   total: number;
+  activeCount: number;
+  inactiveCount: number;
+};
+
+export type AgentWorkspaceSummary = {
+  total: number;
+  activeCount: number;
+  inactiveCount: number;
 };
 
 function slugify(value: string): string {
@@ -126,6 +135,10 @@ export async function listAgentsWithQuery(
     baseQuery.whereILike("name", `%${query.search}%`);
   }
 
+  if (query.status) {
+    baseQuery.where({ status: query.status });
+  }
+
   const sortColumnByField: Record<AgentListSortBy, keyof AgentRow> = {
     name: "name",
     role: "role",
@@ -145,9 +158,37 @@ export async function listAgentsWithQuery(
     .count<{ count: string }>("id as count")
     .first();
 
+  const statusRows = await baseQuery
+    .clone()
+    .select("status")
+    .count<{ status: Agent["status"]; count: string }>("id as count")
+    .groupBy("status");
+
+  const activeCount = Number(statusRows.find((row) => row.status === "active")?.count ?? 0);
+  const inactiveCount = Number(statusRows.find((row) => row.status === "inactive")?.count ?? 0);
+
   return {
     items: rows.map(mapRowToAgent),
-    total: Number(countRow?.count ?? 0)
+    total: Number(countRow?.count ?? 0),
+    activeCount,
+    inactiveCount
+  };
+}
+
+export async function getAgentWorkspaceSummary(workspaceId: string): Promise<AgentWorkspaceSummary> {
+  const statusRows = await db<AgentRow>("agents")
+    .select("status")
+    .count<{ status: Agent["status"]; count: string }>("id as count")
+    .where({ workspace_id: workspaceId })
+    .groupBy("status");
+
+  const activeCount = Number(statusRows.find((row) => row.status === "active")?.count ?? 0);
+  const inactiveCount = Number(statusRows.find((row) => row.status === "inactive")?.count ?? 0);
+
+  return {
+    total: activeCount + inactiveCount,
+    activeCount,
+    inactiveCount
   };
 }
 

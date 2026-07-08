@@ -30,8 +30,10 @@ const DEFAULT_AGENT_FORM: AgentFormValues = {
 
 const AGENTS_PAGE_SIZE = 5;
 const MODEL_FILTER_ALL = "all";
+const STATUS_FILTER_ALL = "all";
 const KNOWN_AGENT_MODELS = ["gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"];
 const PENDING_OPEN_CREATE_AGENT_KEY = "ai-agent-platform.pending-open-create-agent";
+type StatusFilterValue = Agent["status"] | typeof STATUS_FILTER_ALL;
 
 type ToolbarDropdownOption = {
   value: string;
@@ -131,15 +133,25 @@ function toErrorMessage(error: unknown): string {
 interface AgentsQueryState {
   workspaceId: string;
   searchKeyword: string;
+  statusFilter: StatusFilterValue;
   modelFilter: string;
   sortBy: AgentListSortBy;
   sortOrder: "asc" | "desc";
   page: number;
 }
 
+function toStatusFilterValue(value: string | null): StatusFilterValue {
+  if (value === "active" || value === "inactive") {
+    return value;
+  }
+
+  return STATUS_FILTER_ALL;
+}
+
 function parseAgentsQueryParams(searchParams: URLSearchParams): AgentsQueryState {
   const workspaceId = searchParams.get("workspaceId") ?? "";
   const searchKeyword = searchParams.get("q") ?? "";
+  const statusFilter = toStatusFilterValue(searchParams.get("status"));
   const modelFilter = searchParams.get("model") ?? MODEL_FILTER_ALL;
 
   const sortByParam = searchParams.get("sortBy");
@@ -150,7 +162,7 @@ function parseAgentsQueryParams(searchParams: URLSearchParams): AgentsQueryState
   const pageParam = Number(searchParams.get("page"));
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
 
-  return { workspaceId, searchKeyword, modelFilter, sortBy, sortOrder, page };
+  return { workspaceId, searchKeyword, statusFilter, modelFilter, sortBy, sortOrder, page };
 }
 
 function buildAgentsQueryParams(query: AgentsQueryState): URLSearchParams {
@@ -161,6 +173,9 @@ function buildAgentsQueryParams(query: AgentsQueryState): URLSearchParams {
   }
   if (query.searchKeyword) {
     params.set("q", query.searchKeyword);
+  }
+  if (query.statusFilter !== STATUS_FILTER_ALL) {
+    params.set("status", query.statusFilter);
   }
   if (query.modelFilter !== MODEL_FILTER_ALL) {
     params.set("model", query.modelFilter);
@@ -185,6 +200,9 @@ export function AgentManagementPage() {
   const [initialQueryState] = useState<AgentsQueryState>(() => parseAgentsQueryParams(searchParams));
   const [agents, setAgents] = useState<Agent[]>([]);
   const [totalAgents, setTotalAgents] = useState(0);
+  const [workspaceTotalAgentsCount, setWorkspaceTotalAgentsCount] = useState(0);
+  const [workspaceActiveAgentsCount, setWorkspaceActiveAgentsCount] = useState(0);
+  const [workspaceInactiveAgentsCount, setWorkspaceInactiveAgentsCount] = useState(0);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isRefreshingAgents, setIsRefreshingAgents] = useState(false);
   const [hasSearchedAgents, setHasSearchedAgents] = useState(false);
@@ -193,12 +211,14 @@ export function AgentManagementPage() {
   const [workspaceOptions, setWorkspaceOptions] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialQueryState.workspaceId);
   const [draftSearchInput, setDraftSearchInput] = useState(initialQueryState.searchKeyword);
+  const [draftStatusFilter, setDraftStatusFilter] = useState(initialQueryState.statusFilter);
   const [draftModelFilter, setDraftModelFilter] = useState(initialQueryState.modelFilter);
   const [draftSortBy, setDraftSortBy] = useState<AgentListSortBy>(initialQueryState.sortBy);
   const [draftSortOrder, setDraftSortOrder] = useState<"asc" | "desc">(initialQueryState.sortOrder);
   const [appliedQuery, setAppliedQuery] = useState<{
     workspaceId: string;
     searchKeyword: string;
+    statusFilter: StatusFilterValue;
     modelFilter: string;
     sortBy: AgentListSortBy;
     sortOrder: "asc" | "desc";
@@ -207,6 +227,7 @@ export function AgentManagementPage() {
       ? {
           workspaceId: initialQueryState.workspaceId,
           searchKeyword: initialQueryState.searchKeyword,
+          statusFilter: initialQueryState.statusFilter,
           modelFilter: initialQueryState.modelFilter,
           sortBy: initialQueryState.sortBy,
           sortOrder: initialQueryState.sortOrder
@@ -274,6 +295,7 @@ export function AgentManagementPage() {
           pageSize: AGENTS_PAGE_SIZE,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
+          status: query.statusFilter === STATUS_FILTER_ALL ? undefined : query.statusFilter,
           model: query.modelFilter === MODEL_FILTER_ALL ? undefined : query.modelFilter,
           search: query.searchKeyword || undefined
         });
@@ -284,6 +306,9 @@ export function AgentManagementPage() {
 
         setAgents(response.items);
         setTotalAgents(response.total);
+        setWorkspaceTotalAgentsCount(response.workspaceTotalCount);
+        setWorkspaceActiveAgentsCount(response.workspaceActiveCount);
+        setWorkspaceInactiveAgentsCount(response.workspaceInactiveCount);
         setHasSearchedAgents(true);
 
         setModelOptions((current) => {
@@ -303,6 +328,9 @@ export function AgentManagementPage() {
         setAgentsError(toErrorMessage(error));
         setAgents([]);
         setTotalAgents(0);
+        setWorkspaceTotalAgentsCount(0);
+        setWorkspaceActiveAgentsCount(0);
+        setWorkspaceInactiveAgentsCount(0);
       } finally {
         if (requestId === latestAgentsRequestIdRef.current) {
           setIsLoadingAgents(false);
@@ -318,6 +346,7 @@ export function AgentManagementPage() {
     const nextParams = buildAgentsQueryParams({
       workspaceId: appliedQuery?.workspaceId ?? "",
       searchKeyword: appliedQuery?.searchKeyword ?? "",
+      statusFilter: appliedQuery?.statusFilter ?? STATUS_FILTER_ALL,
       modelFilter: appliedQuery?.modelFilter ?? MODEL_FILTER_ALL,
       sortBy: appliedQuery?.sortBy ?? "name",
       sortOrder: appliedQuery?.sortOrder ?? "asc",
@@ -531,6 +560,10 @@ export function AgentManagementPage() {
     setDraftModelFilter(nextValue || MODEL_FILTER_ALL);
   }
 
+  function handleStatusFilterChange(nextValue: string) {
+    setDraftStatusFilter(toStatusFilterValue(nextValue));
+  }
+
   function handleSortByChange(nextValue: string) {
     const nextSortBy = nextValue as AgentListSortBy;
     setDraftSortBy(nextSortBy);
@@ -555,6 +588,7 @@ export function AgentManagementPage() {
     const nextQuery = {
       workspaceId,
       searchKeyword: draftSearchInput.trim(),
+      statusFilter: draftStatusFilter,
       modelFilter: draftModelFilter,
       sortBy: draftSortBy,
       sortOrder: draftSortOrder
@@ -564,6 +598,7 @@ export function AgentManagementPage() {
       appliedQuery !== null &&
       appliedQuery.workspaceId === nextQuery.workspaceId &&
       appliedQuery.searchKeyword === nextQuery.searchKeyword &&
+      appliedQuery.statusFilter === nextQuery.statusFilter &&
       appliedQuery.modelFilter === nextQuery.modelFilter &&
       appliedQuery.sortBy === nextQuery.sortBy &&
       appliedQuery.sortOrder === nextQuery.sortOrder;
@@ -667,7 +702,7 @@ export function AgentManagementPage() {
                   {createFormError ? <p className="agents-list-state agents-list-state--error">{createFormError}</p> : null}
 
                   <div className="agent-form-actions">
-                    <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button>
+                    {/* <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button> */}
                     <button type="submit" className="btn-primary" disabled={isCreatingAgent}>
                       {isCreatingAgent ? "Creating..." : "Create agent"}
                     </button>
@@ -709,7 +744,13 @@ export function AgentManagementPage() {
         <section className="agents-list-panel" aria-labelledby="my-agents-title">
           <div className="agents-panel-header">
             <h2 id="my-agents-title">My agents</h2>
-            {hasSearchedAgents ? <p>{`${totalAgents} agent(s)${isRefreshingAgents ? " • Updating..." : ""}`}</p> : null}
+            {hasSearchedAgents ? (
+              <div className="agents-summary" aria-live="polite">
+                <span className="agents-summary-pill agents-summary-pill--total">{`${workspaceTotalAgentsCount} agent(s)`}</span>
+                <span className="agents-summary-pill agents-summary-pill--active">{`${workspaceActiveAgentsCount} Active`}</span>
+                <span className="agents-summary-pill agents-summary-pill--inactive">{`${workspaceInactiveAgentsCount} Inactive`}</span>
+              </div>
+            ) : null}
           </div>
 
           <div className="agents-list-toolbar" role="region" aria-label="Agent list tools">
@@ -736,7 +777,7 @@ export function AgentManagementPage() {
               </div>
             </div>
 
-            <div className="agents-list-toolbar-secondary">
+            <div className="agents-list-toolbar-middle">
               <label className="agents-list-toolbar-item agents-search-field">
                 <span>Search</span>
                 <input
@@ -746,6 +787,19 @@ export function AgentManagementPage() {
                   placeholder="Search agent name"
                 />
               </label>
+            </div>
+
+            <div className="agents-list-toolbar-bottom">
+              <ToolbarDropdown
+                label="Status"
+                selectedValue={draftStatusFilter}
+                onSelect={handleStatusFilterChange}
+                options={[
+                  { value: STATUS_FILTER_ALL, label: "All statuses" },
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" }
+                ]}
+              />
 
               <ToolbarDropdown
                 label="Model"

@@ -1,14 +1,16 @@
-import type { Agent, CreateAgentInput, UpdateAgentInput } from "@ai-agent-platform/shared";
+import type { Agent, AgentStatus, CreateAgentInput, UpdateAgentInput } from "@ai-agent-platform/shared";
 import type { Workspace } from "@ai-agent-platform/shared";
 
 import {
   createAgent as createAgentRecord,
   countAgentsByWorkspace,
   deleteAgent as deleteAgentRecord,
+  getAgentWorkspaceSummary,
   getAgentById as getAgentByIdRecord,
   getAgentByName,
   listAgents as listAgentsRecord,
   listAgentsWithQuery,
+  type AgentWorkspaceSummary,
   type AgentListSortBy,
   type ListAgentsResult,
   updateAgent as updateAgentRecord
@@ -30,6 +32,7 @@ export type ListAgentsQueryInput = {
   sortOrder?: "asc" | "desc";
   model?: string;
   search?: string;
+  status?: AgentStatus;
 };
 
 export type ListAgentsQuery = {
@@ -39,6 +42,7 @@ export type ListAgentsQuery = {
   sortOrder: "asc" | "desc";
   model?: string;
   search?: string;
+  status?: AgentStatus;
 };
 
 const DEFAULT_LIST_QUERY: ListAgentsQuery = {
@@ -104,6 +108,11 @@ function normalizeListAgentsQuery(input: ListAgentsQueryInput = {}): ListAgentsQ
 
   const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : undefined;
   const search = typeof input.search === "string" && input.search.trim() ? input.search.trim() : undefined;
+  const status = input.status;
+
+  if (typeof status !== "undefined" && status !== "active" && status !== "inactive") {
+    throw new AgentValidationError("status must be active or inactive.");
+  }
 
   return {
     page,
@@ -111,7 +120,8 @@ function normalizeListAgentsQuery(input: ListAgentsQueryInput = {}): ListAgentsQ
     sortBy,
     sortOrder,
     model,
-    search
+    search,
+    status
   };
 }
 
@@ -149,6 +159,11 @@ export async function listAgentsWithQueryService(
   await loadActiveWorkspaceOrThrow(workspaceId);
   const query = normalizeListAgentsQuery(input);
   return listAgentsWithQuery(workspaceId, query);
+}
+
+export async function getAgentWorkspaceSummaryService(workspaceId: string): Promise<AgentWorkspaceSummary> {
+  await loadActiveWorkspaceOrThrow(workspaceId);
+  return getAgentWorkspaceSummary(workspaceId);
 }
 
 export async function getAgentByIdService(workspaceId: string, id: string): Promise<Agent> {

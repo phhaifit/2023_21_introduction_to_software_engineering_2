@@ -9,6 +9,7 @@ import {
   AgentWorkspaceInactiveError,
   createAgentService,
   deleteAgentService,
+  getAgentWorkspaceSummaryService,
   getAgentByIdService,
   listAgentsWithQueryService,
   updateAgentService
@@ -55,19 +56,29 @@ export const getAgentsController: RequestHandler = async (_request, response, ne
     const sortOrder = toSingleString(_request.query.sortOrder);
     const model = toSingleString(_request.query.model);
     const search = toSingleString(_request.query.search);
+    const status = toSingleString(_request.query.status);
 
-    const result = await listAgentsWithQueryService(workspaceId, {
-      page,
-      pageSize,
-      sortBy: sortBy as "name" | "role" | "model" | undefined,
-      sortOrder: sortOrder as "asc" | "desc" | undefined,
-      model,
-      search
-    });
+    const [result, workspaceSummary] = await Promise.all([
+      listAgentsWithQueryService(workspaceId, {
+        page,
+        pageSize,
+        sortBy: sortBy as "name" | "role" | "model" | undefined,
+        sortOrder: sortOrder as "asc" | "desc" | undefined,
+        model,
+        search,
+        status: isAgentStatus(status) ? status : undefined
+      }),
+      getAgentWorkspaceSummaryService(workspaceId)
+    ]);
 
     response.setHeader("X-Total-Count", String(result.total));
     response.setHeader("X-Page", String(page ?? 1));
     response.setHeader("X-Page-Size", String(pageSize ?? 20));
+    response.setHeader("X-Active-Count", String(result.activeCount));
+    response.setHeader("X-Inactive-Count", String(result.inactiveCount));
+    response.setHeader("X-Workspace-Total-Count", String(workspaceSummary.total));
+    response.setHeader("X-Workspace-Active-Count", String(workspaceSummary.activeCount));
+    response.setHeader("X-Workspace-Inactive-Count", String(workspaceSummary.inactiveCount));
     response.json(result.items);
   } catch (error) {
     handleAgentError(error, response, next);
