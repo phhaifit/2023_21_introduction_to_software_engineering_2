@@ -9,7 +9,7 @@ const routingModes: Array<{ value: TaskRoutingMode; label: string }> = [
   { value: "automatic", label: "Auto" },
   { value: "agent", label: "Agent" },
   { value: "workflow", label: "Workflow" },
-  { value: "multi-agent", label: "Team" }
+  { value: "multi-agent", label: "Multi Agent" }
 ];
 
 const emptyConsole: TaskConsole = {
@@ -257,9 +257,8 @@ export function TaskOrchestrationPanel() {
     return consoleData.agents.find((agent) => agent.status === "online") ?? consoleData.agents[0];
   }, [consoleData.agents, consoleData.workflows, routingMode, selectedAgentId, selectedWorkflowId]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!prompt.trim() || isSubmitting) return;
+  async function executeSubmit(promptText: string) {
+    if (!promptText.trim() || isSubmitting) return;
 
     setErrorMessage("");
     setIsSubmitting(true);
@@ -268,7 +267,7 @@ export function TaskOrchestrationPanel() {
       const statsJson = JSON.stringify(statistics);
       const eventsJson = JSON.stringify(calendarEvents);
       const task = await submitTask({
-        prompt,
+        prompt: promptText,
         routingMode,
         targetId: routingMode === "workflow" ? selectedWorkflowId : routingMode === "agent" ? selectedAgentId : undefined,
         taskId: selectedTask ? selectedTask.id : undefined,
@@ -292,6 +291,11 @@ export function TaskOrchestrationPanel() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await executeSubmit(prompt);
   }
 
   const handleNewTask = () => {
@@ -478,8 +482,7 @@ export function TaskOrchestrationPanel() {
             {activeTab === 'tasks' ? (
               selectedTask ? (
                 <>
-                  <span>Running via: <strong>{selectedTask.targetName}</strong></span>
-                  <span className="target-type-badge">{selectedTask.targetType}</span>
+                  <span>Task Session</span>
                 </>
               ) : (
                 <span>New Task Session</span>
@@ -536,22 +539,22 @@ export function TaskOrchestrationPanel() {
 
                   <div className="starter-chips">
                     <button
-                      onClick={() => setPrompt("Hãy lập kế hoạch phát triển (development timeline) trong 4 tuần cho một tính năng giỏ hàng của ứng dụng di động.")}
+                      onClick={() => setPrompt("Plan a 4-week development timeline for a mobile app shopping cart feature.")}
                       type="button"
                     >
-                      Lập kế hoạch phát triển 4 tuần cho giỏ hàng
+                      Plan 4-week development roadmap for shopping cart
                     </button>
                     <button
-                      onClick={() => setPrompt("Đánh giá rủi ro cho việc phát hành bản cập nhật database lớn của hệ thống ERP nội bộ.")}
+                      onClick={() => setPrompt("Assess the risks of releasing a major database update for the internal ERP system.")}
                       type="button"
                     >
-                      Đánh giá rủi ro release database ERP
+                      Assess risks for ERP database release
                     </button>
                     <button
                       onClick={() => setPrompt("please delete all recent tasks")}
                       type="button"
                     >
-                      Xóa tất cả các tác vụ gần đây (Clean console)
+                      Delete all recent tasks (Clean console)
                     </button>
                   </div>
                 </div>
@@ -576,9 +579,7 @@ export function TaskOrchestrationPanel() {
                           <div className={`chat-msg chat-msg--assistant chat-msg--${message.error ? "failed" : "completed"}`} key={message.id}>
                             <div className="chat-msg__avatar">AI</div>
                             <div className="chat-msg__content">
-                              <div className="chat-msg__sender">
-                                {selectedTask.targetName}
-                              </div>
+                              <div className="chat-msg__sender">Assistant</div>
 
                               {message.error ? (
                                 <div className="chat-msg__error-box">
@@ -676,11 +677,8 @@ export function TaskOrchestrationPanel() {
 
                       <div className={`chat-msg chat-msg--assistant chat-msg--${selectedTask.status}`}>
                         <div className="chat-msg__avatar">AI</div>
-                        <div className="chat-msg__content">
-                          <div className="chat-msg__sender">
-                            {selectedTask.targetName}
-                            <span className="routing-mode-label">({selectedTask.routingMode} routing)</span>
-                          </div>
+                          <div className="chat-msg__content">
+                          <div className="chat-msg__sender">Assistant</div>
 
                           {selectedTask.status === "failed" ? (
                             <div className="chat-msg__error-box">
@@ -838,11 +836,7 @@ export function TaskOrchestrationPanel() {
                     </select>
                   )}
 
-                  {previewTarget && (
-                    <div className="routing-preview-badge">
-                      Target: <strong>{previewTarget.name}</strong>
-                    </div>
-                  )}
+                  {/* Preview target removed to avoid UI layout issues */}
                 </div>
 
                 {/* Main Pill-shaped Textarea wrapper */}
@@ -853,9 +847,7 @@ export function TaskOrchestrationPanel() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
-                        if (prompt.trim() && !isSubmitting) {
-                          handleSubmit(event as any);
-                        }
+                        executeSubmit(prompt);
                       }
                     }}
                     placeholder="Describe the task that should be routed to an agent, workflow, or team..."

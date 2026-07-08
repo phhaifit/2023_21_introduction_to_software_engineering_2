@@ -264,6 +264,10 @@ export async function updateTask(input: OrchestratedTask) {
       .where({ id: input.id })
       .update({
         status: input.status,
+        routing_mode: input.routingMode,
+        target_type: input.targetType,
+        target_id: input.targetId,
+        target_name: input.targetName,
         result: input.result,
         result_summary: input.resultSummary,
         error: input.error,

@@ -80,38 +80,26 @@ export async function submitTaskService(input: SubmitTaskInput): Promise<Orchest
   };
   let collaborationContext: any;
 
-  if (existingTask) {
-    routingDecision = {
-      mode: existingTask.routingMode,
-      target: {
-        id: existingTask.targetId,
-        name: existingTask.targetName,
-        type: existingTask.targetType,
-        status: "online",
-        capabilities: []
-      },
-      reason: "Continuing existing task conversation thread."
-    };
-    collaborationContext = existingTask.collaborationContext;
-  } else {
-    const rawDecision = analyzeRouting({
-      prompt,
-      routingMode: input.routingMode,
-      targetId: input.targetId,
-      agents,
-      workflows
-    });
-    routingDecision = {
-      mode: rawDecision.mode,
-      target: rawDecision.target,
-      reason: rawDecision.reason
-    };
-    collaborationContext = buildCollaborationContext({
-      prompt,
-      target: routingDecision.target,
-      agents
-    });
-  }
+  const rawDecision = analyzeRouting({
+    prompt,
+    routingMode: input.routingMode,
+    targetId: input.targetId,
+    agents,
+    workflows
+  });
+  routingDecision = {
+    mode: rawDecision.mode,
+    target: rawDecision.target,
+    reason: existingTask
+      ? `Continuing existing task conversation thread with target: ${rawDecision.target.name}.`
+      : rawDecision.reason
+  };
+  collaborationContext = buildCollaborationContext({
+    prompt,
+    target: routingDecision.target,
+    agents,
+    routingMode: routingDecision.mode
+  });
 
   const now = new Date().toISOString();
 
@@ -250,9 +238,14 @@ export async function submitTaskService(input: SubmitTaskInput): Promise<Orchest
 
       if (existingTask) {
         existingTask.status = "failed";
+        existingTask.routingMode = routingDecision.mode;
+        existingTask.targetType = routingDecision.target.type;
+        existingTask.targetId = routingDecision.target.id;
+        existingTask.targetName = routingDecision.target.name;
         existingTask.result = null;
         existingTask.resultSummary = null;
         existingTask.error = errorMsg;
+        existingTask.collaborationContext = collaborationContext;
         existingTask.messages = currentMessages;
         existingTask.updatedAt = new Date().toISOString();
 
@@ -313,9 +306,14 @@ export async function submitTaskService(input: SubmitTaskInput): Promise<Orchest
 
   if (existingTask) {
     existingTask.status = "completed";
+    existingTask.routingMode = routingDecision.mode;
+    existingTask.targetType = routingDecision.target.type;
+    existingTask.targetId = routingDecision.target.id;
+    existingTask.targetName = routingDecision.target.name;
     existingTask.result = result.output;
     existingTask.resultSummary = result.summary;
     existingTask.error = null;
+    existingTask.collaborationContext = collaborationContext;
     existingTask.messages = currentMessages;
     existingTask.updatedAt = new Date().toISOString();
 

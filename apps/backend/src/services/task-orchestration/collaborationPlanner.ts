@@ -1,22 +1,30 @@
-import type { CollaborationContext, ExecutionTarget } from "@ai-agent-platform/shared";
+import type { CollaborationContext, ExecutionTarget, TaskRoutingMode } from "@ai-agent-platform/shared";
 
 interface BuildCollaborationContextInput {
   prompt: string;
   target: ExecutionTarget;
   agents: ExecutionTarget[];
+  routingMode?: TaskRoutingMode;
 }
 
 export function buildCollaborationContext({
   prompt,
   target,
-  agents
+  agents,
+  routingMode
 }: BuildCollaborationContextInput): CollaborationContext | null {
+  // If the user explicitly chose single agent/workflow execution, do not collaborate
+  if (routingMode === "agent" || routingMode === "workflow") {
+    return null;
+  }
+
   const participants = agents
     .filter((agent) => agent.status === "online")
     .slice(0, 3)
     .map((agent) => agent.name);
 
-  if (target.type !== "agent" || (!target.capabilities.includes("multi-agent") && participants.length < 2)) {
+  // Collaboration only runs on agent targets that have multi-agent coordination capabilities
+  if (target.type !== "agent" || !target.capabilities.includes("multi-agent")) {
     return null;
   }
 
@@ -31,3 +39,4 @@ export function buildCollaborationContext({
     ]
   };
 }
+
