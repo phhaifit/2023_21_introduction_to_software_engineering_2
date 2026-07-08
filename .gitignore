@@ -5,6 +5,7 @@ coverage/
 .env
 .env.*
 !.env.example
+apps/backend/src/generated/prisma/
 npm-debug.log*
 vite.config.ts.timestamp-*
 vite.config.*.timestamp-*

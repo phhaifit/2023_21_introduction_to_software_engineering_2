@@ -6,6 +6,7 @@ export interface Agent {
   role: string;
   model: string;
   instructionContent: string;
+  skillFileContent?: string;
   status: AgentStatus;
   createdAt: string;
   updatedAt: string;
@@ -16,6 +17,7 @@ export interface CreateAgentInput {
   role: string;
   model: string;
   instructionContent: string;
+  skillFileContent?: string;
   status: AgentStatus;
 }
 
@@ -24,5 +26,6 @@ export interface UpdateAgentInput {
   role?: string;
   model?: string;
   instructionContent?: string;
+  skillFileContent?: string;
   status?: AgentStatus;
 }
