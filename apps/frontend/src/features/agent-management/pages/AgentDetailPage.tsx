@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Agent, UpdateAgentInput } from "@ai-agent-platform/shared";
 import { deleteAgent, getAgent, updateAgent } from "../api/agentApi";
 
@@ -44,7 +44,12 @@ function toEditForm(agent: Agent): AgentEditForm {
 
 export function AgentDetailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { agentId = "" } = useParams();
+  const agentsListUrl =
+    typeof (location.state as { fromAgentsListUrl?: unknown } | null)?.fromAgentsListUrl === "string"
+      ? (location.state as { fromAgentsListUrl: string }).fromAgentsListUrl
+      : "/app/agents";
   const [agent, setAgent] = useState<Agent | null>(null);
   const [editForm, setEditForm] = useState<AgentEditForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,7 +198,7 @@ export function AgentDetailPage() {
 
     try {
       await deleteAgent(agent.id);
-      navigate("/app/agents", { replace: true });
+      navigate(agentsListUrl, { replace: true });
     } catch (error) {
       setDeleteError(toErrorMessage(error));
     } finally {
@@ -308,7 +313,7 @@ export function AgentDetailPage() {
   return (
     <div className="agents-main agent-page-enter">
         <div className={isEditMode ? "agent-detail-toolbar agent-detail-toolbar--editing agent-animate-in" : "agent-detail-toolbar agent-animate-in"}>
-          <Link className="btn-secondary agent-inline-link" to="/app/agents">
+          <Link className="btn-secondary agent-inline-link" to={agentsListUrl}>
             Back to agents
           </Link>
           {!isLoading && agent ? (

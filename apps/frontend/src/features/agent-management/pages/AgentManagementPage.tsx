@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type { Agent, Workspace } from "@ai-agent-platform/shared";
 import { createAgent, listAgents, type AgentListSortBy } from "../api/agentApi";
 import { saveActiveWorkspaceId } from "../../workspace-management/api/workspaceContext";
@@ -128,28 +128,91 @@ function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Request failed.";
 }
 
+interface AgentsQueryState {
+  workspaceId: string;
+  searchKeyword: string;
+  modelFilter: string;
+  sortBy: AgentListSortBy;
+  sortOrder: "asc" | "desc";
+  page: number;
+}
+
+function parseAgentsQueryParams(searchParams: URLSearchParams): AgentsQueryState {
+  const workspaceId = searchParams.get("workspaceId") ?? "";
+  const searchKeyword = searchParams.get("q") ?? "";
+  const modelFilter = searchParams.get("model") ?? MODEL_FILTER_ALL;
+
+  const sortByParam = searchParams.get("sortBy");
+  const sortBy: AgentListSortBy = sortByParam === "role" || sortByParam === "model" ? sortByParam : "name";
+
+  const sortOrder: "asc" | "desc" = searchParams.get("sortOrder") === "desc" ? "desc" : "asc";
+
+  const pageParam = Number(searchParams.get("page"));
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+
+  return { workspaceId, searchKeyword, modelFilter, sortBy, sortOrder, page };
+}
+
+function buildAgentsQueryParams(query: AgentsQueryState): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (query.workspaceId) {
+    params.set("workspaceId", query.workspaceId);
+  }
+  if (query.searchKeyword) {
+    params.set("q", query.searchKeyword);
+  }
+  if (query.modelFilter !== MODEL_FILTER_ALL) {
+    params.set("model", query.modelFilter);
+  }
+  if (query.sortBy !== "name") {
+    params.set("sortBy", query.sortBy);
+  }
+  if (query.sortOrder !== "asc") {
+    params.set("sortOrder", query.sortOrder);
+  }
+  if (query.page > 1) {
+    params.set("page", String(query.page));
+  }
+
+  return params;
+}
+
 export function AgentManagementPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [initialQueryState] = useState<AgentsQueryState>(() => parseAgentsQueryParams(searchParams));
   const [agents, setAgents] = useState<Agent[]>([]);
   const [totalAgents, setTotalAgents] = useState(0);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isRefreshingAgents, setIsRefreshingAgents] = useState(false);
   const [hasSearchedAgents, setHasSearchedAgents] = useState(false);
   const [agentsError, setAgentsError] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialQueryState.page);
   const [workspaceOptions, setWorkspaceOptions] = useState<Workspace[]>([]);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
-  const [draftSearchInput, setDraftSearchInput] = useState("");
-  const [draftModelFilter, setDraftModelFilter] = useState(MODEL_FILTER_ALL);
-  const [draftSortBy, setDraftSortBy] = useState<AgentListSortBy>("name");
-  const [draftSortOrder, setDraftSortOrder] = useState<"asc" | "desc">("asc");
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(initialQueryState.workspaceId);
+  const [draftSearchInput, setDraftSearchInput] = useState(initialQueryState.searchKeyword);
+  const [draftModelFilter, setDraftModelFilter] = useState(initialQueryState.modelFilter);
+  const [draftSortBy, setDraftSortBy] = useState<AgentListSortBy>(initialQueryState.sortBy);
+  const [draftSortOrder, setDraftSortOrder] = useState<"asc" | "desc">(initialQueryState.sortOrder);
   const [appliedQuery, setAppliedQuery] = useState<{
     workspaceId: string;
     searchKeyword: string;
     modelFilter: string;
     sortBy: AgentListSortBy;
     sortOrder: "asc" | "desc";
-  } | null>(null);
+  } | null>(
+    initialQueryState.workspaceId
+      ? {
+          workspaceId: initialQueryState.workspaceId,
+          searchKeyword: initialQueryState.searchKeyword,
+          modelFilter: initialQueryState.modelFilter,
+          sortBy: initialQueryState.sortBy,
+          sortOrder: initialQueryState.sortOrder
+        }
+      : null
+  );
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [modelOptions, setModelOptions] = useState<string[]>(KNOWN_AGENT_MODELS);
 
@@ -166,6 +229,13 @@ export function AgentManagementPage() {
   const latestAgentsRequestIdRef = useRef(0);
 
   const totalPages = Math.max(1, Math.ceil(totalAgents / AGENTS_PAGE_SIZE));
+
+  useEffect(() => {
+    if (initialQueryState.workspaceId) {
+      saveActiveWorkspaceId(initialQueryState.workspaceId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     async function bootstrapWorkspaces() {
@@ -243,6 +313,20 @@ export function AgentManagementPage() {
 
     void bootstrapAgents();
   }, [appliedQuery, currentPage, refreshCounter]);
+
+  useEffect(() => {
+    const nextParams = buildAgentsQueryParams({
+      workspaceId: appliedQuery?.workspaceId ?? "",
+      searchKeyword: appliedQuery?.searchKeyword ?? "",
+      modelFilter: appliedQuery?.modelFilter ?? MODEL_FILTER_ALL,
+      sortBy: appliedQuery?.sortBy ?? "name",
+      sortOrder: appliedQuery?.sortOrder ?? "asc",
+      page: currentPage
+    });
+
+    setSearchParams(nextParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedQuery, currentPage]);
 
   useEffect(() => {
     if (!isCreatePanelOpen) {
@@ -431,7 +515,9 @@ export function AgentManagementPage() {
   }
 
   function openAgentDetail(agentId: string) {
-    navigate(`/app/agents/${agentId}`);
+    navigate(`/app/agents/${agentId}`, {
+      state: { fromAgentsListUrl: `${location.pathname}${location.search}` }
+    });
   }
 
   function handleCardKeyDown(agentId: string, event: ReactKeyboardEvent<HTMLElement>) {
