@@ -1,5 +1,4 @@
 import type { ErrorRequestHandler } from "express";
-
 import { ApplicationError } from "../errors/applicationError.js";
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
@@ -13,10 +12,12 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
     return;
   }
 
-  response.status(500).json({
+  const statusCode = typeof error.statusCode === "number" ? error.statusCode : 500;
+
+  response.status(statusCode).json({
     error: {
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Internal Server Error"
+      code: error.code ?? "INTERNAL_SERVER_ERROR",
+      message: statusCode === 500 ? "Internal Server Error" : error.message
     }
   });
 };

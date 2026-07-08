@@ -5,6 +5,7 @@ import { AppTopBar } from "../../../app/components/AppTopBar";
 import { useAuth } from "../context/AuthContext";
 
 import "../styles/authentication.css";
+import { TaskOrchestrationPanel } from "../../task-orchestration/components/TaskOrchestrationPanel";
 import { mainApplicationNavigation } from "./mainApplication.navigation";
 
 export function MainApplicationPage() {
@@ -27,6 +28,8 @@ export function MainApplicationPage() {
           </div>
         </header>
 
+        <TaskOrchestrationPanel />
+        
         <section className="main-application-content" aria-labelledby="main-title">
           <div className="main-status-mark" aria-hidden="true">
             ✓

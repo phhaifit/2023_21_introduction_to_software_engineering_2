@@ -65,8 +65,12 @@
 
 .main-application-shell {
   background: #eef5fb;
-  min-height: 100vh;
-  padding: 28px;
+  height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .main-application-header {
@@ -75,10 +79,13 @@
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 8px;
   display: flex;
-  justify-content: flex-start;
-  margin: 0 auto;
+  justify-content: space-between;
+  width: 100%;
   max-width: 1120px;
-  padding: 16px 20px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .main-application-content {

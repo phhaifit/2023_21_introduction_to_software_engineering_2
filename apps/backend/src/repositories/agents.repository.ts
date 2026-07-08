@@ -161,7 +161,7 @@ export async function listAgentsWithQuery(
   const statusRows = await baseQuery
     .clone()
     .select("status")
-    .count<{ status: Agent["status"]; count: string }>("id as count")
+    .count<{ status: Agent["status"]; count: string }[]>("id as count")
     .groupBy("status");
 
   const activeCount = Number(statusRows.find((row) => row.status === "active")?.count ?? 0);
@@ -178,7 +178,7 @@ export async function listAgentsWithQuery(
 export async function getAgentWorkspaceSummary(workspaceId: string): Promise<AgentWorkspaceSummary> {
   const statusRows = await db<AgentRow>("agents")
     .select("status")
-    .count<{ status: Agent["status"]; count: string }>("id as count")
+    .count<{ status: Agent["status"]; count: string }[]>("id as count")
     .where({ workspace_id: workspaceId })
     .groupBy("status");
 
