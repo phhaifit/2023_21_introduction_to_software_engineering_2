@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { authenticateRequest } from "../middleware/authentication.js";
-import { resolveWorkspaceContext } from "../middleware/workspaceContext.js";
+import { requireWorkspaceRole, resolveWorkspaceContext } from "../middleware/workspaceContext.js";
 import {
   createAgentController,
   deleteAgentController,
@@ -16,7 +16,7 @@ agentsRouter.use(authenticateRequest);
 agentsRouter.use(resolveWorkspaceContext);
 
 // Permission checks are intentionally disabled for Agent Management for now.
-agentsRouter.get("/", getAgentsController);
+agentsRouter.get("/", requireWorkspaceRole(["admin", "member", "viewer"]), getAgentsController);
 
 // agentsRouter.get("/:id", requireWorkspaceRole(["admin", "member", "viewer"]), getAgentController);
 agentsRouter.get("/:id", getAgentController);

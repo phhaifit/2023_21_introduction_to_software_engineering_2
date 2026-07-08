@@ -89,6 +89,26 @@ export function AppTopBar({ collapsed, onToggleSidebar }: AppTopBarProps) {
       <div className="app-topbar-center" aria-hidden="true" />
 
       <div className="app-topbar-right" ref={menuRef}>
+        <div className="app-topbar-shortcuts" aria-label="Quick actions">
+          <button
+            type="button"
+            className="app-topbar-shortcut"
+            onClick={() => navigate("/app/agents")}
+          >
+            <span className="app-topbar-shortcut-mark" aria-hidden="true">+</span>
+            <span>Agent</span>
+          </button>
+
+          <button
+            type="button"
+            className="app-topbar-shortcut"
+            onClick={() => navigate("/app/workspaces")}
+          >
+            <span className="app-topbar-shortcut-mark" aria-hidden="true">+</span>
+            <span>Workspace</span>
+          </button>
+        </div>
+
         <button
           type="button"
           className="app-topbar-profile-button"

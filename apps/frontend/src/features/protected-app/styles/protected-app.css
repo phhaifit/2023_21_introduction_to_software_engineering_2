@@ -87,8 +87,52 @@
 .protected-dashboard-hero__eyebrow { color: #4f46e5; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; margin: 0 0 4px; text-transform: uppercase; }
 
 .protected-app-topbar__account {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
   flex: 0 0 auto;
   position: relative;
+}
+
+.protected-app-topbar__quick-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.protected-app-topbar__quick-action {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dfe5f0;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 7%);
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px 0 8px;
+}
+
+.protected-app-topbar__quick-action:hover {
+  background: #eef2ff;
+}
+
+.protected-app-topbar__quick-action-mark {
+  align-items: center;
+  background: #0f172a;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  width: 20px;
 }
 
 .protected-app-profile-button {
@@ -193,6 +237,8 @@
   .protected-app-content,
   .protected-app-topbar { padding-left: 16px; padding-right: 16px; }
   .protected-app-topbar { align-items: flex-start; flex-direction: column; }
+  .protected-app-topbar__quick-action span:not(.protected-app-topbar__quick-action-mark) { display: none; }
+  .protected-app-topbar__quick-action { min-width: 36px; padding: 0; }
   .protected-dashboard-grid { grid-template-columns: 1fr; }
   .protected-dashboard-hero { padding: 22px; }
 }

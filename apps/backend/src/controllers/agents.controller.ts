@@ -10,9 +10,31 @@ import {
   createAgentService,
   deleteAgentService,
   getAgentByIdService,
-  listAgentsService,
+  listAgentsWithQueryService,
   updateAgentService
 } from "../services/agents.service.js";
+
+function toPositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function toSingleString(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+    return value[0];
+  }
+
+  return undefined;
+}
 
 function isAgentStatus(value: unknown): value is AgentStatus {
   return value === "active" || value === "inactive";
@@ -27,7 +49,26 @@ export const getAgentsController: RequestHandler = async (_request, response, ne
       return;
     }
 
-    response.json(await listAgentsService(workspaceId));
+    const page = toPositiveInteger(_request.query.page);
+    const pageSize = toPositiveInteger(_request.query.pageSize);
+    const sortBy = toSingleString(_request.query.sortBy);
+    const sortOrder = toSingleString(_request.query.sortOrder);
+    const model = toSingleString(_request.query.model);
+    const search = toSingleString(_request.query.search);
+
+    const result = await listAgentsWithQueryService(workspaceId, {
+      page,
+      pageSize,
+      sortBy: sortBy as "name" | "role" | "model" | undefined,
+      sortOrder: sortOrder as "asc" | "desc" | undefined,
+      model,
+      search
+    });
+
+    response.setHeader("X-Total-Count", String(result.total));
+    response.setHeader("X-Page", String(page ?? 1));
+    response.setHeader("X-Page-Size", String(pageSize ?? 20));
+    response.json(result.items);
   } catch (error) {
     handleAgentError(error, response, next);
   }

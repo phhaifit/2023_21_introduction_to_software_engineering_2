@@ -23,6 +23,25 @@ interface AgentRequestContext {
 
 export type WorkspaceAccessRole = "admin" | "member" | "viewer";
 
+export type AgentListSortBy = "name" | "role" | "model";
+
+export interface ListAgentsOptions {
+  workspaceId?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: AgentListSortBy;
+  sortOrder?: "asc" | "desc";
+  model?: string;
+  search?: string;
+}
+
+export interface ListAgentsResponse {
+  items: Agent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export class AgentApiError extends Error {
   constructor(message: string, public readonly status: number) {
     super(message);
@@ -94,14 +113,16 @@ async function resolveRunningWorkspaceId(accessToken: string): Promise<string> {
   return workspace.id;
 }
 
-async function resolveAgentRequestContext(): Promise<AgentRequestContext> {
+async function resolveAgentRequestContext(preferredWorkspaceId?: string): Promise<AgentRequestContext> {
   const accessToken = getAccessToken();
 
   if (!accessToken) {
     throw new Error("You are not authenticated.");
   }
 
-  const workspaceId = await resolveRunningWorkspaceId(accessToken);
+  const workspaceId = preferredWorkspaceId?.trim()
+    ? preferredWorkspaceId.trim()
+    : await resolveRunningWorkspaceId(accessToken);
 
   return { accessToken, workspaceId };
 }
@@ -138,13 +159,68 @@ export async function detectAgentWorkspaceRole(): Promise<WorkspaceAccessRole> {
   throw new AgentApiError("No accessible workspace role found for Agent Management.", 403);
 }
 
-export async function listAgents(role: WorkspaceAccessRole = "member"): Promise<Agent[]> {
-  const { accessToken, workspaceId } = await resolveAgentRequestContext();
+function toPositiveInteger(value: string | null | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
 
-  return requestJson<Agent[]>("/agents", {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export async function listAgents(
+  role: WorkspaceAccessRole = "member",
+  options: ListAgentsOptions = {}
+): Promise<ListAgentsResponse> {
+  const { accessToken, workspaceId } = await resolveAgentRequestContext(options.workspaceId);
+
+  const query = new URLSearchParams();
+
+  if (typeof options.page === "number") {
+    query.set("page", String(options.page));
+  }
+
+  if (typeof options.pageSize === "number") {
+    query.set("pageSize", String(options.pageSize));
+  }
+
+  if (options.sortBy) {
+    query.set("sortBy", options.sortBy);
+  }
+
+  if (options.sortOrder) {
+    query.set("sortOrder", options.sortOrder);
+  }
+
+  if (options.model?.trim()) {
+    query.set("model", options.model.trim());
+  }
+
+  if (options.search?.trim()) {
+    query.set("search", options.search.trim());
+  }
+
+  const queryString = query.toString();
+  const path = queryString ? `/agents?${queryString}` : "/agents";
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "GET",
     headers: buildWorkspaceHeaders({ accessToken, workspaceId }, role)
   });
+
+  const body = (await response.json().catch(() => ([]))) as ApiErrorBody | Agent[];
+
+  if (!response.ok) {
+    const errorBody = body as ApiErrorBody;
+    throw new AgentApiError(errorBody.error || errorBody.message || "Request failed.", response.status);
+  }
+
+  return {
+    items: Array.isArray(body) ? body : [],
+    total: toPositiveInteger(response.headers.get("x-total-count"), 0),
+    page: toPositiveInteger(response.headers.get("x-page"), options.page ?? 1),
+    pageSize: toPositiveInteger(response.headers.get("x-page-size"), options.pageSize ?? 20)
+  };
 }
 
 export async function getAgent(id: string, role: WorkspaceAccessRole = "member"): Promise<Agent> {

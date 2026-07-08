@@ -1,8 +1,10 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import type { Agent } from "@ai-agent-platform/shared";
-import { createAgent, listAgents } from "../api/agentApi";
+import type { Agent, Workspace } from "@ai-agent-platform/shared";
+import { createAgent, listAgents, type AgentListSortBy } from "../api/agentApi";
+import { saveActiveWorkspaceId } from "../../workspace-management/api/workspaceContext";
+import { listWorkspaces } from "../../workspace-management/api/workspaceApi";
 
 import "../styles/agents.css";
 
@@ -26,6 +28,98 @@ const DEFAULT_AGENT_FORM: AgentFormValues = {
   status: "active"
 };
 
+const AGENTS_PAGE_SIZE = 5;
+const MODEL_FILTER_ALL = "all";
+const KNOWN_AGENT_MODELS = ["gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"];
+const PENDING_OPEN_CREATE_AGENT_KEY = "ai-agent-platform.pending-open-create-agent";
+
+type ToolbarDropdownOption = {
+  value: string;
+  label: string;
+};
+
+interface ToolbarDropdownProps {
+  label: string;
+  options: ToolbarDropdownOption[];
+  selectedValue: string;
+  onSelect: (nextValue: string) => void;
+}
+
+function ToolbarDropdown(props: ToolbarDropdownProps) {
+  const { label, options, selectedValue, onSelect } = props;
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handleOutsideClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!containerRef.current?.contains(target)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handleOutsideClick);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((option) => option.value === selectedValue);
+
+  return (
+    <div className="agents-list-toolbar-item agents-toolbar-dropdown" ref={containerRef}>
+      <span>{label}</span>
+
+      <button
+        type="button"
+        className={`agents-toolbar-dropdown-trigger ${isOpen ? "is-open" : ""}`}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span>{selectedOption?.label ?? "Select"}</span>
+        <span className={`agents-toolbar-dropdown-caret ${isOpen ? "is-open" : ""}`} aria-hidden="true">⌄</span>
+      </button>
+
+      <div className={`agents-toolbar-dropdown-menu ${isOpen ? "is-open" : ""}`} role="listbox" aria-label={label}>
+        {options.map((option) => {
+          const isSelected = option.value === selectedValue;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`agents-toolbar-dropdown-option ${isSelected ? "is-selected" : ""}`}
+              onClick={() => {
+                onSelect(option.value);
+                setIsOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function toStatusLabel(status: Agent["status"]): string {
   return status[0].toUpperCase() + status.slice(1);
 }
@@ -37,8 +131,27 @@ function toErrorMessage(error: unknown): string {
 export function AgentManagementPage() {
   const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [totalAgents, setTotalAgents] = useState(0);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [isRefreshingAgents, setIsRefreshingAgents] = useState(false);
+  const [hasSearchedAgents, setHasSearchedAgents] = useState(false);
   const [agentsError, setAgentsError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [workspaceOptions, setWorkspaceOptions] = useState<Workspace[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
+  const [draftSearchInput, setDraftSearchInput] = useState("");
+  const [draftModelFilter, setDraftModelFilter] = useState(MODEL_FILTER_ALL);
+  const [draftSortBy, setDraftSortBy] = useState<AgentListSortBy>("name");
+  const [draftSortOrder, setDraftSortOrder] = useState<"asc" | "desc">("asc");
+  const [appliedQuery, setAppliedQuery] = useState<{
+    workspaceId: string;
+    searchKeyword: string;
+    modelFilter: string;
+    sortBy: AgentListSortBy;
+    sortOrder: "asc" | "desc";
+  } | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [modelOptions, setModelOptions] = useState<string[]>(KNOWN_AGENT_MODELS);
 
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
   const [createForm, setCreateForm] = useState<AgentFormValues>(DEFAULT_AGENT_FORM);
@@ -47,23 +160,89 @@ export function AgentManagementPage() {
   const [createFileInputKey, setCreateFileInputKey] = useState(0);
   const [createFormError, setCreateFormError] = useState("");
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
+  const [searchToastMessage, setSearchToastMessage] = useState("");
+  const [isSearchToastVisible, setIsSearchToastVisible] = useState(false);
+  const [isSearchToastClosing, setIsSearchToastClosing] = useState(false);
+  const latestAgentsRequestIdRef = useRef(0);
+
+  const totalPages = Math.max(1, Math.ceil(totalAgents / AGENTS_PAGE_SIZE));
 
   useEffect(() => {
+    async function bootstrapWorkspaces() {
+      try {
+        const all = await listWorkspaces();
+        setWorkspaceOptions(all);
+      } catch {
+        setWorkspaceOptions([]);
+      }
+    }
+
+    void bootstrapWorkspaces();
+  }, []);
+
+  useEffect(() => {
+    if (!appliedQuery?.workspaceId) {
+      return;
+    }
+
+    const query = appliedQuery;
+    const requestId = latestAgentsRequestIdRef.current + 1;
+    latestAgentsRequestIdRef.current = requestId;
+
     async function bootstrapAgents() {
-      setIsLoadingAgents(true);
+      if (hasSearchedAgents) {
+        setIsRefreshingAgents(true);
+      } else {
+        setIsLoadingAgents(true);
+      }
       setAgentsError("");
 
       try {
-        setAgents(await listAgents());
+        const response = await listAgents("member", {
+          workspaceId: query.workspaceId,
+          page: currentPage,
+          pageSize: AGENTS_PAGE_SIZE,
+          sortBy: query.sortBy,
+          sortOrder: query.sortOrder,
+          model: query.modelFilter === MODEL_FILTER_ALL ? undefined : query.modelFilter,
+          search: query.searchKeyword || undefined
+        });
+
+        if (requestId !== latestAgentsRequestIdRef.current) {
+          return;
+        }
+
+        setAgents(response.items);
+        setTotalAgents(response.total);
+        setHasSearchedAgents(true);
+
+        setModelOptions((current) => {
+          const discoveredModels = response.items.map((agent) => agent.model.trim()).filter(Boolean);
+          return Array.from(new Set([...KNOWN_AGENT_MODELS, ...current, ...discoveredModels])).sort();
+        });
+
+        const normalizedTotalPages = Math.max(1, Math.ceil(response.total / AGENTS_PAGE_SIZE));
+        if (currentPage > normalizedTotalPages) {
+          setCurrentPage(normalizedTotalPages);
+        }
       } catch (error) {
+        if (requestId !== latestAgentsRequestIdRef.current) {
+          return;
+        }
+
         setAgentsError(toErrorMessage(error));
+        setAgents([]);
+        setTotalAgents(0);
       } finally {
-        setIsLoadingAgents(false);
+        if (requestId === latestAgentsRequestIdRef.current) {
+          setIsLoadingAgents(false);
+          setIsRefreshingAgents(false);
+        }
       }
     }
 
     void bootstrapAgents();
-  }, []);
+  }, [appliedQuery, currentPage, refreshCounter]);
 
   useEffect(() => {
     if (!isCreatePanelOpen) {
@@ -86,6 +265,63 @@ export function AgentManagementPage() {
       window.removeEventListener("keydown", handleEscape);
     };
   }, [isCreatePanelOpen]);
+
+  useEffect(() => {
+    function handleOpenCreateAgent() {
+      setIsCreatePanelOpen(true);
+    }
+
+    window.addEventListener("app:open-create-agent", handleOpenCreateAgent);
+
+    return () => {
+      window.removeEventListener("app:open-create-agent", handleOpenCreateAgent);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem(PENDING_OPEN_CREATE_AGENT_KEY) !== "true") {
+      return;
+    }
+
+    setIsCreatePanelOpen(true);
+    window.sessionStorage.removeItem(PENDING_OPEN_CREATE_AGENT_KEY);
+  }, []);
+
+  useEffect(() => {
+    if (!isSearchToastVisible || isSearchToastClosing) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSearchToastClosing(true);
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSearchToastClosing, isSearchToastVisible]);
+
+  useEffect(() => {
+    if (!isSearchToastClosing) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSearchToastVisible(false);
+      setIsSearchToastClosing(false);
+      setSearchToastMessage("");
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSearchToastClosing]);
+
+  function showSearchToast(message: string) {
+    setSearchToastMessage(message);
+    setIsSearchToastVisible(true);
+    setIsSearchToastClosing(false);
+  }
 
   function handleCreateFieldChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = event.target;
@@ -170,13 +406,14 @@ export function AgentManagementPage() {
     setIsCreatingAgent(true);
 
     try {
-      const created = await createAgent(payload);
-      setAgents((current) => [created, ...current]);
+      await createAgent(payload);
       setCreateForm(DEFAULT_AGENT_FORM);
       setUploadedSkillFileName("");
       setUploadedSkillFileContent("");
       setCreateFileInputKey((current) => current + 1);
       setIsCreatePanelOpen(false);
+      setCurrentPage(1);
+      setRefreshCounter((current) => current + 1);
     } catch (error) {
       setCreateFormError(toErrorMessage(error));
     } finally {
@@ -204,76 +441,153 @@ export function AgentManagementPage() {
     }
   }
 
+  function handleModelFilterChange(nextValue: string) {
+    setDraftModelFilter(nextValue || MODEL_FILTER_ALL);
+  }
+
+  function handleSortByChange(nextValue: string) {
+    const nextSortBy = nextValue as AgentListSortBy;
+    setDraftSortBy(nextSortBy);
+  }
+
+  function handleToggleSortOrder() {
+    setDraftSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+  }
+
+  function handleSearchAgents() {
+    if (isLoadingAgents || isRefreshingAgents) {
+      return;
+    }
+
+    const workspaceId = selectedWorkspaceId.trim();
+
+    if (!workspaceId) {
+      showSearchToast("Please select a workspace before searching agents.");
+      return;
+    }
+
+    const nextQuery = {
+      workspaceId,
+      searchKeyword: draftSearchInput.trim(),
+      modelFilter: draftModelFilter,
+      sortBy: draftSortBy,
+      sortOrder: draftSortOrder
+    };
+
+    const isDuplicateQuery =
+      appliedQuery !== null &&
+      appliedQuery.workspaceId === nextQuery.workspaceId &&
+      appliedQuery.searchKeyword === nextQuery.searchKeyword &&
+      appliedQuery.modelFilter === nextQuery.modelFilter &&
+      appliedQuery.sortBy === nextQuery.sortBy &&
+      appliedQuery.sortOrder === nextQuery.sortOrder;
+
+    if (isDuplicateQuery && currentPage === 1) {
+      return;
+    }
+
+    saveActiveWorkspaceId(workspaceId);
+    setAgentsError("");
+
+    if (isDuplicateQuery) {
+      setCurrentPage(1);
+      return;
+    }
+
+    setCurrentPage(1);
+    setAppliedQuery(nextQuery);
+  }
+
+  function goToPreviousPage() {
+    setCurrentPage((current) => Math.max(1, current - 1));
+  }
+
+  function goToNextPage() {
+    setCurrentPage((current) => Math.min(totalPages, current + 1));
+  }
+
   const createAgentDialog =
     isCreatePanelOpen && typeof document !== "undefined"
       ? createPortal(
           <>
-            <button
-              type="button"
+            <div
               className="agents-modal-backdrop"
-              aria-label="Close create agent dialog"
-              onClick={handleCreateCancel}
+              aria-hidden="true"
             />
 
             <section className="agents-create-panel" aria-labelledby="create-agent-title" aria-modal="true" role="dialog">
-              <div className="agents-panel-header">
-                <h2 id="create-agent-title">Create new agent</h2>
-                <p>Configure identity and behavior for this agent.</p>
+              <div className="agents-create-panel-header">
+                <div className="agents-create-panel-heading">
+                  <h2 id="create-agent-title">Create new agent</h2>
+                  <p>Configure identity and behavior for this agent.</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="agents-create-panel-close"
+                  aria-label="Close create agent dialog"
+                  onClick={handleCreateCancel}
+                  disabled={isCreatingAgent}
+                >
+                  ×
+                </button>
               </div>
 
-              <form className="agent-form" onSubmit={handleCreateAgentSubmit}>
-                <label>
-                  Agent name
-                  <input type="text" name="name" value={createForm.name} onChange={handleCreateFieldChange} placeholder="Example: Customer-Support-Agent" disabled={isCreatingAgent} required />
-                </label>
+              <div className="agents-create-panel-body">
+                <form className="agent-form" onSubmit={handleCreateAgentSubmit}>
+                  <label>
+                    Agent name
+                    <input type="text" name="name" value={createForm.name} onChange={handleCreateFieldChange} placeholder="Example: Customer-Support-Agent" disabled={isCreatingAgent} required />
+                  </label>
 
-                <label>
-                  Role
-                  <input type="text" name="role" value={createForm.role} onChange={handleCreateFieldChange} placeholder="Example: Support Specialist" disabled={isCreatingAgent} required />
-                </label>
+                  <label>
+                    Role
+                    <input type="text" name="role" value={createForm.role} onChange={handleCreateFieldChange} placeholder="Example: Support Specialist" disabled={isCreatingAgent} required />
+                  </label>
 
-                <label>
-                  Model
-                  <select name="model" value={createForm.model} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
-                    <option value="gpt-4o-mini">gpt-4o-mini</option>
-                    <option value="gpt-4.1">gpt-4.1</option>
-                    <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                  </select>
-                </label>
+                  <label>
+                    Model
+                    <select name="model" value={createForm.model} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
+                      <option value="gpt-4o-mini">gpt-4o-mini</option>
+                      <option value="gpt-4.1">gpt-4.1</option>
+                      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                    </select>
+                  </label>
 
-                <label>
-                  Instruction
-                  <textarea name="instruction" rows={5} value={createForm.instructionContent} onChange={handleCreateFieldChange} placeholder="Define what the agent should do, constraints, and output format." disabled={isCreatingAgent} required />
-                </label>
+                  <label>
+                    Instruction
+                    <textarea name="instruction" rows={5} value={createForm.instructionContent} onChange={handleCreateFieldChange} placeholder="Define what the agent should do, constraints, and output format." disabled={isCreatingAgent} required />
+                  </label>
 
-                <label>
-                  Status
-                  <select name="status" value={createForm.status} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </label>
+                  <label>
+                    Status
+                    <select name="status" value={createForm.status} onChange={handleCreateFieldChange} disabled={isCreatingAgent}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </label>
 
-                <label>
-                  Optional skill.md
-                  <input key={createFileInputKey} type="file" accept=".md,text/markdown" onChange={(event) => void handleCreateSkillFileChange(event)} disabled={isCreatingAgent} />
-                </label>
+                  <label>
+                    Optional skill.md
+                    <input key={createFileInputKey} type="file" accept=".md,text/markdown" onChange={(event) => void handleCreateSkillFileChange(event)} disabled={isCreatingAgent} />
+                  </label>
 
-                <p className="agents-form-hint">
-                  {uploadedSkillFileName
-                    ? `Using uploaded file: ${uploadedSkillFileName}`
-                    : "If no skill.md is uploaded, the system will generate a default one from the form values."}
-                </p>
+                  <p className="agents-form-hint">
+                    {uploadedSkillFileName
+                      ? `Using uploaded file: ${uploadedSkillFileName}`
+                      : "If no skill.md is uploaded, the system will generate a default one from the form values."}
+                  </p>
 
-                {createFormError ? <p className="agents-list-state agents-list-state--error">{createFormError}</p> : null}
+                  {createFormError ? <p className="agents-list-state agents-list-state--error">{createFormError}</p> : null}
 
-                <div className="agent-form-actions">
-                  <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button>
-                  <button type="submit" className="btn-primary" disabled={isCreatingAgent}>
-                    {isCreatingAgent ? "Creating..." : "Create agent"}
-                  </button>
-                </div>
-              </form>
+                  <div className="agent-form-actions">
+                    <button type="button" className="btn-secondary" onClick={handleCreateCancel} disabled={isCreatingAgent}>Cancel</button>
+                    <button type="submit" className="btn-primary" disabled={isCreatingAgent}>
+                      {isCreatingAgent ? "Creating..." : "Create agent"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </section>
           </>,
           document.body
@@ -282,33 +596,111 @@ export function AgentManagementPage() {
 
   return (
     <div className="agents-main agent-page-enter">
-        <header className="agents-topbar">
-          <div>
-            <p className="agents-eyebrow">Agent Management</p>
-            <h1>View and manage your agents</h1>
-            <p className="agents-heading-description">
-              Create, inspect, and maintain the agents available to your workspace.
-            </p>
-          </div>
+      <header className="agents-topbar">
+        <div>
+          <p className="agents-eyebrow">Agent Management</p>
+          <h1>View and manage your agents</h1>
+          <p className="agents-heading-description">
+            Create, inspect, and maintain the agents available to your workspace.
+          </p>
+        </div>
 
-          <div className="agents-create-disclosure">
-            <button
-              type="button"
-              className="agents-create-button"
-              onClick={() => setIsCreatePanelOpen((current) => !current)}
-              title="Create new agent"
-            >
-              + Create agent
-            </button>
+        <div className="agents-create-disclosure">
+          <button
+            type="button"
+            className="agents-create-button"
+            onClick={() => setIsCreatePanelOpen((current) => !current)}
+            title="Create new agent"
+          >
+            + Create agent
+          </button>
 
-            {createAgentDialog}
-          </div>
-        </header>
+          {createAgentDialog}
+        </div>
+      </header>
 
-        <section className="agents-panel agents-list-panel" aria-labelledby="my-agents-title">
+      <div className="agents-list-shell">
+        <section className="agents-list-panel" aria-labelledby="my-agents-title">
           <div className="agents-panel-header">
             <h2 id="my-agents-title">My agents</h2>
-            <p>{isLoadingAgents ? "Loading..." : `${agents.length} agent(s)`}</p>
+            {hasSearchedAgents ? <p>{`${totalAgents} agent(s)${isRefreshingAgents ? " • Updating..." : ""}`}</p> : null}
+          </div>
+
+          <div className="agents-list-toolbar" role="region" aria-label="Agent list tools">
+            <div className="agents-list-toolbar-primary">
+              <ToolbarDropdown
+                label="Workspace (required)"
+                selectedValue={selectedWorkspaceId}
+                onSelect={setSelectedWorkspaceId}
+                options={[
+                  { value: "", label: "Select workspace" },
+                  ...workspaceOptions.map((workspace) => ({ value: workspace.id, label: workspace.name }))
+                ]}
+              />
+
+              <div className="agents-list-toolbar-item agents-toolbar-search-action">
+                <button
+                  type="button"
+                  className="btn-primary agents-toolbar-search-button"
+                  onClick={handleSearchAgents}
+                  disabled={isLoadingAgents || isRefreshingAgents}
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
+            <div className="agents-list-toolbar-secondary">
+              <label className="agents-list-toolbar-item agents-search-field">
+                <span>Search</span>
+                <input
+                  type="search"
+                  value={draftSearchInput}
+                  onChange={(event) => setDraftSearchInput(event.target.value)}
+                  placeholder="Search agent name"
+                />
+              </label>
+
+              <ToolbarDropdown
+                label="Model"
+                selectedValue={draftModelFilter}
+                onSelect={handleModelFilterChange}
+                options={[
+                  { value: MODEL_FILTER_ALL, label: "All models" },
+                  ...modelOptions.map((model) => ({ value: model, label: model }))
+                ]}
+              />
+
+              <ToolbarDropdown
+                label="Sort by"
+                selectedValue={draftSortBy}
+                onSelect={handleSortByChange}
+                options={[
+                  { value: "name", label: "Name" },
+                  { value: "role", label: "Role" },
+                  { value: "model", label: "Model" }
+                ]}
+              />
+
+              <div className="agents-list-toolbar-item agents-sort-order-control">
+                <span>Order</span>
+
+                <button
+                  type="button"
+                  className="agents-sort-order-button"
+                  onClick={handleToggleSortOrder}
+                  aria-label={draftSortOrder === "asc" ? "Switch to descending sort order" : "Switch to ascending sort order"}
+                  title={draftSortOrder === "asc" ? "Ascending" : "Descending"}
+                >
+                  <span
+                    className={`agents-sort-order-icon ${draftSortOrder === "desc" ? "is-desc" : "is-asc"}`}
+                    aria-hidden="true"
+                  >
+                    ↑
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="agents-list">
@@ -316,7 +708,7 @@ export function AgentManagementPage() {
               <p className="agents-list-state">Loading agents...</p>
             ) : agentsError ? (
               <p className="agents-list-state agents-list-state--error">{agentsError}</p>
-            ) : agents.length === 0 ? (
+            ) : !hasSearchedAgents ? null : totalAgents === 0 ? (
               <p className="agents-list-state">No agents found in workspace.</p>
             ) : (
               agents.map((agent) => {
@@ -347,7 +739,40 @@ export function AgentManagementPage() {
               })
             )}
           </div>
+
+          {hasSearchedAgents && totalAgents > 0 ? (
+            <div className="agents-pagination" aria-label="Agents pagination">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={goToPreviousPage}
+                disabled={isLoadingAgents || currentPage <= 1}
+              >
+                Previous
+              </button>
+
+              <p>
+                Page {currentPage} / {totalPages}
+              </p>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={goToNextPage}
+                disabled={isLoadingAgents || currentPage >= totalPages}
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
         </section>
+      </div>
+
+      {isSearchToastVisible ? (
+        <div className={`agents-toast ${isSearchToastClosing ? "is-closing" : "is-open"}`} role="status" aria-live="polite">
+          <p>{searchToastMessage}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

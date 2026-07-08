@@ -84,6 +84,46 @@
   position: relative;
 }
 
+.app-topbar-shortcuts {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.app-topbar-shortcut {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px 0 8px;
+}
+
+.app-topbar-shortcut:hover {
+  background: #eef2ff;
+}
+
+.app-topbar-shortcut-mark {
+  align-items: center;
+  background: #0f172a;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  width: 20px;
+}
+
 .app-topbar-profile-button {
   align-items: center;
   background: #f8fafc;
@@ -146,5 +186,14 @@
   .app-topbar-brand-name,
   .app-topbar-profile-label {
     display: none;
+  }
+
+  .app-topbar-shortcut span:not(.app-topbar-shortcut-mark) {
+    display: none;
+  }
+
+  .app-topbar-shortcut {
+    min-width: 34px;
+    padding: 0;
   }
 }

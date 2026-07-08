@@ -8,6 +8,9 @@ import {
   getAgentById as getAgentByIdRecord,
   getAgentByName,
   listAgents as listAgentsRecord,
+  listAgentsWithQuery,
+  type AgentListSortBy,
+  type ListAgentsResult,
   updateAgent as updateAgentRecord
 } from "../repositories/agents.repository.js";
 import { getWorkspaceById } from "../repositories/workspaces.repository.js";
@@ -19,6 +22,33 @@ const AGENT_LIMITS_BY_PROFILE: Record<Workspace["config"]["resourceProfile"], nu
   Standard: Number(process.env.AGENT_LIMIT_STANDARD ?? 20),
   Performance: Number(process.env.AGENT_LIMIT_PERFORMANCE ?? 20)
 };
+
+export type ListAgentsQueryInput = {
+  page?: number;
+  pageSize?: number;
+  sortBy?: AgentListSortBy;
+  sortOrder?: "asc" | "desc";
+  model?: string;
+  search?: string;
+};
+
+export type ListAgentsQuery = {
+  page: number;
+  pageSize: number;
+  sortBy: AgentListSortBy;
+  sortOrder: "asc" | "desc";
+  model?: string;
+  search?: string;
+};
+
+const DEFAULT_LIST_QUERY: ListAgentsQuery = {
+  page: 1,
+  pageSize: 20,
+  sortBy: "name",
+  sortOrder: "asc"
+};
+
+const MAX_PAGE_SIZE = 100;
 
 export class AgentValidationError extends Error {
   constructor(message: string) {
@@ -48,6 +78,43 @@ export class AgentWorkspaceInactiveError extends Error {
   }
 }
 
+function normalizeListAgentsQuery(input: ListAgentsQueryInput = {}): ListAgentsQuery {
+  const page = input.page ?? DEFAULT_LIST_QUERY.page;
+  const pageSize = input.pageSize ?? DEFAULT_LIST_QUERY.pageSize;
+
+  if (!Number.isInteger(page) || page < 1) {
+    throw new AgentValidationError("page must be an integer greater than or equal to 1.");
+  }
+
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+    throw new AgentValidationError(
+      `pageSize must be an integer between 1 and ${MAX_PAGE_SIZE}.`
+    );
+  }
+
+  const sortBy = input.sortBy ?? DEFAULT_LIST_QUERY.sortBy;
+  if (sortBy !== "name" && sortBy !== "role" && sortBy !== "model") {
+    throw new AgentValidationError("sortBy must be one of: name, role, model.");
+  }
+
+  const sortOrder = input.sortOrder ?? DEFAULT_LIST_QUERY.sortOrder;
+  if (sortOrder !== "asc" && sortOrder !== "desc") {
+    throw new AgentValidationError("sortOrder must be asc or desc.");
+  }
+
+  const model = typeof input.model === "string" && input.model.trim() ? input.model.trim() : undefined;
+  const search = typeof input.search === "string" && input.search.trim() ? input.search.trim() : undefined;
+
+  return {
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    model,
+    search
+  };
+}
+
 function assertValidAgentName(name: string): void {
   if (!AGENT_NAME_PATTERN.test(name)) {
     throw new AgentValidationError(
@@ -73,6 +140,15 @@ async function loadActiveWorkspaceOrThrow(workspaceId: string): Promise<Workspac
 export async function listAgentsService(workspaceId: string): Promise<Agent[]> {
   await loadActiveWorkspaceOrThrow(workspaceId);
   return listAgentsRecord(workspaceId);
+}
+
+export async function listAgentsWithQueryService(
+  workspaceId: string,
+  input: ListAgentsQueryInput
+): Promise<ListAgentsResult> {
+  await loadActiveWorkspaceOrThrow(workspaceId);
+  const query = normalizeListAgentsQuery(input);
+  return listAgentsWithQuery(workspaceId, query);
 }
 
 export async function getAgentByIdService(workspaceId: string, id: string): Promise<Agent> {

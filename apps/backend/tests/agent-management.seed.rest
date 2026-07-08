@@ -1,12 +1,14 @@
 @baseUrl = http://localhost:3000/api
 @email = duongthienbao0412@gmail.com
 @password = Abc1234@
+@workspaceName = Agent Demo Workspace {{$timestamp}}
 
+# Optional: uncomment once if account does not exist yet.
 # ### register
 # # @name register
 # POST {{baseUrl}}/auth/register
 # Content-Type: application/json
-
+#
 # {
 #   "email": "{{email}}",
 #   "password": "{{password}}",
@@ -27,10 +29,11 @@ Content-Type: application/json
 # @name workspaceCreate
 POST {{baseUrl}}/workspaces
 Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
 
 {
-  "name": "Agent Demo Workspace",
-  "description": "Workspace for seeding agents",
+  "name": "{{workspaceName}}",
+  "description": "Workspace for seeding 20 demo agents",
   "templateId": "business-operations",
   "resourceProfile": "Standard",
   "region": "ap-southeast-1"
@@ -38,8 +41,9 @@ Content-Type: application/json
 
 ### set workspace running
 POST {{baseUrl}}/workspaces/{{workspaceCreate.response.body.$.data.id}}/complete
+Authorization: Bearer {{login.response.body.$.accessToken}}
 
-### create agent 1
+### create agent 01
 POST {{baseUrl}}/agents
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.$.accessToken}}
@@ -47,29 +51,15 @@ X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
 X-Workspace-Role: member
 
 {
-  "name": "Research-Agent",
-  "role": "Research Specialist",
-  "model": "gpt-4.1-mini",
-  "instructionContent": "Gather and summarize requirements from project docs.",
-  "status": "active"
-}
-
-### create agent 2
-POST {{baseUrl}}/agents
-Content-Type: application/json
-Authorization: Bearer {{login.response.body.$.accessToken}}
-X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
-X-Workspace-Role: member
-
-{
-  "name": "Writer-Agent",
-  "role": "Documentation Writer",
+  "name": "Support-Scout-01",
+  "role": "Support Assistant",
   "model": "gpt-4o-mini",
-  "instructionContent": "Draft clear implementation notes from inputs.",
+  "instructionContent": "Answer simple support questions in short bullet points.",
+  "skillFileContent": "# Skill\n\nFocus on FAQ lookup and concise responses.\n\n- Confirm issue\n- Provide next step\n",
   "status": "active"
 }
 
-### create agent 3
+### create agent 02 (default skill)
 POST {{baseUrl}}/agents
 Content-Type: application/json
 Authorization: Bearer {{login.response.body.$.accessToken}}
@@ -77,15 +67,300 @@ X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
 X-Workspace-Role: member
 
 {
-  "name": "Review-Agent",
-  "role": "Quality Reviewer",
+  "name": "Triage-Desk-02",
+  "role": "Ticket Triage",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Classify incoming requests by urgency and topic.",
+  "status": "active"
+}
+
+### create agent 03
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Doc-Helper-03",
+  "role": "Documentation Assistant",
   "model": "gpt-4.1",
-  "instructionContent": "Review outputs for correctness and consistency.",
+  "instructionContent": "Draft short release notes from a list of changes.",
+  "skillFileContent": "# Skill\n\nWrite docs with plain language and action verbs.",
+  "status": "active"
+}
+
+### create agent 04 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Sprint-Mapper-04",
+  "role": "Planning Assistant",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Break feature ideas into 3 to 5 practical tasks.",
+  "status": "active"
+}
+
+### create agent 05
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "QA-Pulse-05",
+  "role": "QA Assistant",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Create simple positive and negative test ideas.",
+  "skillFileContent": "# Skill\n\nPrioritize smoke tests first, then edge cases.",
   "status": "inactive"
 }
 
-### list agents
-GET {{baseUrl}}/agents
+### create agent 06 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Scope-Guard-06",
+  "role": "Scope Controller",
+  "model": "gpt-4.1",
+  "instructionContent": "Identify scope creep risk in requirement statements.",
+  "status": "active"
+}
+
+### create agent 07
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Standup-Scribe-07",
+  "role": "Status Reporter",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Summarize daily progress into done, next, blockers.",
+  "skillFileContent": "# Skill\n\nKeep updates under 6 lines and include one blocker if any.",
+  "status": "active"
+}
+
+### create agent 08 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Backlog-Cleaner-08",
+  "role": "Backlog Assistant",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Rewrite vague backlog items into clear tasks.",
+  "status": "active"
+}
+
+### create agent 09
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Review-Compass-09",
+  "role": "Code Review Helper",
+  "model": "gpt-4.1",
+  "instructionContent": "Point out obvious risks and missing validation.",
+  "skillFileContent": "# Skill\n\nReview for correctness before style tweaks.",
+  "status": "active"
+}
+
+### create agent 10 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Mail-Drafter-10",
+  "role": "Communication Assistant",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Draft concise stakeholder updates with clear action.",
+  "status": "inactive"
+}
+
+### create agent 11
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Bug-Hunter-11",
+  "role": "Debug Assistant",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Suggest likely root causes from error descriptions.",
+  "skillFileContent": "# Skill\n\nList hypotheses from most to least probable.",
+  "status": "active"
+}
+
+### create agent 12 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Demo-Narrator-12",
+  "role": "Demo Assistant",
+  "model": "gpt-4.1",
+  "instructionContent": "Write a short demo script for each feature.",
+  "status": "active"
+}
+
+### create agent 13
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Issue-Classifier-13",
+  "role": "Issue Triage",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Tag issues by area, severity, and owner team.",
+  "skillFileContent": "# Skill\n\nUse labels: frontend, backend, infra, docs.",
+  "status": "active"
+}
+
+### create agent 14 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Prompt-Tuner-14",
+  "role": "Prompt Assistant",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Improve prompt clarity while keeping original intent.",
+  "status": "active"
+}
+
+### create agent 15
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Risk-Radar-15",
+  "role": "Risk Analyst",
+  "model": "gpt-4.1",
+  "instructionContent": "Identify schedule and dependency risks in plans.",
+  "skillFileContent": "# Skill\n\nReturn top 3 risks and one mitigation each.",
+  "status": "inactive"
+}
+
+### create agent 16 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Flow-Checker-16",
+  "role": "Workflow Assistant",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Check if workflow steps are complete and ordered.",
+  "status": "active"
+}
+
+### create agent 17
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Spec-Reader-17",
+  "role": "Specification Reader",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Extract acceptance criteria from requirement text.",
+  "skillFileContent": "# Skill\n\nHighlight ambiguous phrases and ask one clarifying question.",
+  "status": "active"
+}
+
+### create agent 18 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Naming-Guide-18",
+  "role": "Naming Assistant",
+  "model": "gpt-4.1",
+  "instructionContent": "Suggest clear names for modules and functions.",
+  "status": "active"
+}
+
+### create agent 19
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Note-Summarizer-19",
+  "role": "Meeting Notes Assistant",
+  "model": "gpt-4o-mini",
+  "instructionContent": "Summarize meeting notes into decisions and actions.",
+  "skillFileContent": "# Skill\n\nMention owner and due date for each action item.",
+  "status": "active"
+}
+
+### create agent 20 (default skill)
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+{
+  "name": "Release-Helper-20",
+  "role": "Release Assistant",
+  "model": "gpt-4.1-mini",
+  "instructionContent": "Prepare release checklist from merged feature list.",
+  "status": "active"
+}
+
+### list agents page 1
+GET {{baseUrl}}/agents?page=1&pageSize=5
+Authorization: Bearer {{login.response.body.$.accessToken}}
+X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
+X-Workspace-Role: member
+
+### list agents page 2
+GET {{baseUrl}}/agents?page=2&pageSize=5
 Authorization: Bearer {{login.response.body.$.accessToken}}
 X-Workspace-Id: {{workspaceCreate.response.body.$.data.id}}
 X-Workspace-Role: member

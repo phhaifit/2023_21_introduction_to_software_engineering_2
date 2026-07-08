@@ -8,6 +8,8 @@ import {
 import "../styles/protected-app.css";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "ai-agent-platform.ui.sidebar-collapsed";
+const PENDING_OPEN_CREATE_AGENT_KEY = "ai-agent-platform.pending-open-create-agent";
+const PENDING_OPEN_CREATE_WORKSPACE_KEY = "ai-agent-platform.pending-open-create-workspace";
 
 const SECTION_LABELS = [
   ["/app/admin/subscriptions", "Admin Subscriptions"],
@@ -125,6 +127,30 @@ export function ProtectedAppShell() {
     });
   }
 
+  function openCreateAgentShortcut() {
+    setAccountOpen(false);
+
+    if (location.pathname === "/app/agents") {
+      window.dispatchEvent(new Event("app:open-create-agent"));
+      return;
+    }
+
+    window.sessionStorage.setItem(PENDING_OPEN_CREATE_AGENT_KEY, "true");
+    navigate("/app/agents");
+  }
+
+  function openCreateWorkspaceShortcut() {
+    setAccountOpen(false);
+
+    if (location.pathname === "/app/workspaces") {
+      window.dispatchEvent(new Event("app:open-create-workspace"));
+      return;
+    }
+
+    window.sessionStorage.setItem(PENDING_OPEN_CREATE_WORKSPACE_KEY, "true");
+    navigate("/app/workspaces");
+  }
+
   return (
     <div className={`protected-app-shell${collapsed ? " protected-app-shell--sidebar-collapsed" : ""}`}>
       <header className="protected-app-topbar">
@@ -151,6 +177,26 @@ export function ProtectedAppShell() {
         </div>
 
         <div className="protected-app-topbar__account" ref={accountMenuRef}>
+          <div className="protected-app-topbar__quick-actions" aria-label="Quick actions">
+            <button
+              className="protected-app-topbar__quick-action"
+              type="button"
+              onClick={openCreateAgentShortcut}
+            >
+              <span className="protected-app-topbar__quick-action-mark" aria-hidden="true">+</span>
+              <span>Agent</span>
+            </button>
+
+            <button
+              className="protected-app-topbar__quick-action"
+              type="button"
+              onClick={openCreateWorkspaceShortcut}
+            >
+              <span className="protected-app-topbar__quick-action-mark" aria-hidden="true">+</span>
+              <span>Workspace</span>
+            </button>
+          </div>
+
           <button
             className="protected-app-profile-button"
             type="button"

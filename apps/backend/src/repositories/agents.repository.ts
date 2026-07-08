@@ -19,6 +19,22 @@ type AgentRow = {
   updated_at: Date;
 };
 
+export type AgentListSortBy = "name" | "role" | "model";
+
+export type ListAgentsQuery = {
+  page: number;
+  pageSize: number;
+  sortBy: AgentListSortBy;
+  sortOrder: "asc" | "desc";
+  model?: string;
+  search?: string;
+};
+
+export type ListAgentsResult = {
+  items: Agent[];
+  total: number;
+};
+
 function slugify(value: string): string {
   return value
     .trim()
@@ -92,6 +108,47 @@ export async function listAgents(workspaceId: string): Promise<Agent[]> {
     .orderBy("created_at", "desc");
 
   return rows.map(mapRowToAgent);
+}
+
+export async function listAgentsWithQuery(
+  workspaceId: string,
+  query: ListAgentsQuery
+): Promise<ListAgentsResult> {
+  const offset = (query.page - 1) * query.pageSize;
+
+  const baseQuery = db<AgentRow>("agents").where({ workspace_id: workspaceId });
+
+  if (query.model) {
+    baseQuery.whereRaw("lower(model) = lower(?)", [query.model]);
+  }
+
+  if (query.search) {
+    baseQuery.whereILike("name", `%${query.search}%`);
+  }
+
+  const sortColumnByField: Record<AgentListSortBy, keyof AgentRow> = {
+    name: "name",
+    role: "role",
+    model: "model"
+  };
+
+  const rows = await baseQuery
+    .clone()
+    .select("*")
+    .orderBy(sortColumnByField[query.sortBy], query.sortOrder)
+    .orderBy("created_at", "desc")
+    .offset(offset)
+    .limit(query.pageSize);
+
+  const countRow = await baseQuery
+    .clone()
+    .count<{ count: string }>("id as count")
+    .first();
+
+  return {
+    items: rows.map(mapRowToAgent),
+    total: Number(countRow?.count ?? 0)
+  };
 }
 
 export async function getAgentById(workspaceId: string, id: string): Promise<Agent | undefined> {

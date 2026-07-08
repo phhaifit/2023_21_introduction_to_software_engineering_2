@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   WORKSPACE_RESOURCE_PROFILES,
@@ -60,6 +61,8 @@ const emptyFormState: WorkspaceFormState = {
   region: "ap-southeast-1"
 };
 
+const PENDING_OPEN_CREATE_WORKSPACE_KEY = "ai-agent-platform.pending-open-create-workspace";
+
 export function WorkspaceManagementPage() {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -75,6 +78,8 @@ export function WorkspaceManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [agentSummary, setAgentSummary] = useState<WorkspaceCountSummary | null>(null);
   const [workflowSummary, setWorkflowSummary] = useState<WorkspaceCountSummary | null>(null);
+  const createSectionRef = useRef<HTMLElement | null>(null);
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false);
 
   async function loadWorkspaces() {
     setIsLoading(true);
@@ -161,6 +166,49 @@ export function WorkspaceManagementPage() {
     };
   }, [selectedWorkspace?.id, selectedWorkspace?.status]);
 
+  useEffect(() => {
+    function handleOpenCreateWorkspace() {
+      setIsCreatePanelOpen(true);
+    }
+
+    window.addEventListener("app:open-create-workspace", handleOpenCreateWorkspace);
+
+    return () => {
+      window.removeEventListener("app:open-create-workspace", handleOpenCreateWorkspace);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem(PENDING_OPEN_CREATE_WORKSPACE_KEY) !== "true") {
+      return;
+    }
+
+    setIsCreatePanelOpen(true);
+    window.sessionStorage.removeItem(PENDING_OPEN_CREATE_WORKSPACE_KEY);
+  }, []);
+
+  useEffect(() => {
+    if (!isCreatePanelOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsCreatePanelOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isCreatePanelOpen]);
+
   const counts = {
     running: workspaces.filter((workspace) => workspace.status === "RUNNING").length,
     provisioning: workspaces.filter((workspace) => workspace.status === "PROVISIONING").length,
@@ -178,6 +226,7 @@ export function WorkspaceManagementPage() {
       setWorkspaces((current) => [workspace, ...current]);
       setSelectedWorkspaceId(workspace.id);
       setCreateForm(emptyFormState);
+      setIsCreatePanelOpen(false);
       setMessage("Workspace created and moved to provisioning.");
     } catch (error) {
       handleWorkspaceMutationError(error);
@@ -261,6 +310,44 @@ export function WorkspaceManagementPage() {
     );
     setOpenedWorkspace((current) => (current?.id === workspace.id ? workspace : current));
   }
+
+  const createWorkspaceDialog =
+    isCreatePanelOpen && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <div className="workspace-modal-backdrop" aria-hidden="true" />
+
+            <section className="workspace-create-panel" aria-labelledby="create-workspace-title" aria-modal="true" role="dialog">
+              <div className="workspace-create-panel-header">
+                <div className="workspace-create-panel-heading">
+                  <h2 id="create-workspace-title">Create workspace</h2>
+                  <p>Create a workspace for the current authenticated user and start it in provisioning.</p>
+                </div>
+                
+                <button
+                  type="button"
+                  className="workspace-create-panel-close"
+                  aria-label="Close create workspace dialog"
+                  onClick={() => setIsCreatePanelOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="workspace-create-panel-body">
+                <WorkspaceForm
+                  errors={formErrors}
+                  formState={createForm}
+                  submitLabel="Create workspace"
+                  onChange={setCreateForm}
+                  onSubmit={(event) => void createWorkspace(event)}
+                />
+              </div>
+            </section>
+          </>,
+          document.body
+        )
+      : null;
 
   return (
     <div className="workspace-page">
@@ -389,7 +476,7 @@ export function WorkspaceManagementPage() {
         </aside>
         </section>
 
-        <section className="create-section">
+        <section className="create-section" ref={createSectionRef}>
         <div>
           <h2>Create workspace</h2>
           <p>Create a workspace for the current authenticated user and start it in provisioning.</p>
@@ -402,6 +489,8 @@ export function WorkspaceManagementPage() {
           onSubmit={(event) => void createWorkspace(event)}
         />
         </section>
+
+        {createWorkspaceDialog}
 
         {openedWorkspace ? <RuntimePreview workspace={openedWorkspace} onClose={() => setOpenedWorkspace(null)} /> : null}
     </div>
